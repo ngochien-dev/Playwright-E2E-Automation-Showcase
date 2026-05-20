@@ -40,6 +40,7 @@ function initializeDatabase() {
         title TEXT,
         description TEXT,
         status TEXT DEFAULT 'todo',
+        priority TEXT DEFAULT 'medium',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -128,14 +129,15 @@ app.get('/api/tasks', authenticate, (req, res) => {
 
 // API Tạo mới một Task
 app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
-  const { title, description } = req.body;
+  const { title, description, priority } = req.body;
   if (!title) {
     return res.status(400).json({ error: 'Tiêu đề công việc là bắt buộc.' });
   }
+  const taskPriority = priority || 'medium';
 
   db.run(
-    'INSERT INTO tasks (title, description, status) VALUES (?, ?, ?)',
-    [title, description || '', 'todo'],
+    'INSERT INTO tasks (title, description, status, priority) VALUES (?, ?, ?, ?)',
+    [title, description || '', 'todo', taskPriority],
     function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -144,7 +146,8 @@ app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
         id: this.lastID,
         title,
         description,
-        status: 'todo'
+        status: 'todo',
+        priority: taskPriority
       });
     }
   );
@@ -153,7 +156,7 @@ app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
 // API Cập nhật nội dung hoặc trạng thái của một Task
 app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
   const { id } = req.params;
-  const { title, description, status } = req.body;
+  const { title, description, status, priority } = req.body;
 
   db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
     if (err) {
@@ -166,10 +169,11 @@ app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
     const updatedTitle = title !== undefined ? title : task.title;
     const updatedDesc = description !== undefined ? description : task.description;
     const updatedStatus = status !== undefined ? status : task.status;
+    const updatedPriority = priority !== undefined ? priority : task.priority;
 
     db.run(
-      'UPDATE tasks SET title = ?, description = ?, status = ? WHERE id = ?',
-      [updatedTitle, updatedDesc, updatedStatus, id],
+      'UPDATE tasks SET title = ?, description = ?, status = ?, priority = ? WHERE id = ?',
+      [updatedTitle, updatedDesc, updatedStatus, updatedPriority, id],
       (err) => {
         if (err) {
           return res.status(500).json({ error: err.message });
@@ -178,7 +182,8 @@ app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
           id: parseInt(id),
           title: updatedTitle,
           description: updatedDesc,
-          status: updatedStatus
+          status: updatedStatus,
+          priority: updatedPriority
         });
       }
     );
@@ -209,8 +214,8 @@ app.post('/api/db/reset', (req, res) => {
       }
       // Chèn lại task hệ thống mặc định để kiểm tra tính năng reset
       db.run(
-        "INSERT INTO tasks (title, description, status) VALUES (?, ?, ?)",
-        ['Task hệ thống ban đầu', 'Task mặc định được tạo trong quá trình khởi tạo.', 'todo'],
+        "INSERT INTO tasks (title, description, status, priority) VALUES (?, ?, ?, ?)",
+        ['Task hệ thống ban đầu', 'Task mặc định được tạo trong quá trình khởi tạo.', 'todo', 'high'],
         (err) => {
           if (err) {
             return res.status(500).json({ error: 'Không thể chèn công việc mặc định.' });

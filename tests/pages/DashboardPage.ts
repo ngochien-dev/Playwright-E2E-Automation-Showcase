@@ -25,6 +25,11 @@ export class DashboardPage extends BasePage {
   readonly saveTaskBtn: Locator;
   readonly cancelTaskBtn: Locator;
 
+  // Định vị các bộ lọc tìm kiếm & độ ưu tiên
+  readonly searchInput: Locator;
+  readonly priorityFilter: Locator;
+  readonly taskPrioritySelect: Locator;
+
   constructor(page: Page) {
     super(page);
     this.userDisplayName = page.locator('#user-display-name');
@@ -48,6 +53,11 @@ export class DashboardPage extends BasePage {
     this.taskStatusSelect = page.locator('#task-status');
     this.saveTaskBtn = page.locator('#save-task-btn');
     this.cancelTaskBtn = page.locator('#cancel-task-btn');
+
+    // Bộ lọc
+    this.searchInput = page.locator('#search-input');
+    this.priorityFilter = page.locator('#priority-filter');
+    this.taskPrioritySelect = page.locator('#task-priority');
   }
 
   async logout() {
@@ -65,11 +75,14 @@ export class DashboardPage extends BasePage {
     await this.taskModal.waitFor({ state: 'visible' });
   }
 
-  async fillTaskForm(title: string, description: string = '', status?: 'todo' | 'in_progress' | 'completed') {
+  async fillTaskForm(title: string, description: string = '', status?: 'todo' | 'in_progress' | 'completed', priority?: 'low' | 'medium' | 'high') {
     await this.taskTitleInput.fill(title);
     await this.taskDescInput.fill(description);
     if (status) {
       await this.taskStatusSelect.selectOption(status);
+    }
+    if (priority) {
+      await this.taskPrioritySelect.selectOption(priority);
     }
   }
 
@@ -78,9 +91,9 @@ export class DashboardPage extends BasePage {
     await this.taskModal.waitFor({ state: 'hidden' });
   }
 
-  async createTask(title: string, description: string = '') {
+  async createTask(title: string, description: string = '', priority: 'low' | 'medium' | 'high' = 'medium') {
     await this.openCreateTaskModal();
-    await this.fillTaskForm(title, description);
+    await this.fillTaskForm(title, description, undefined, priority);
     await this.saveTask();
   }
 
@@ -89,12 +102,20 @@ export class DashboardPage extends BasePage {
     return this.page.locator(`.task-item`, { hasText: title });
   }
 
-  async editTask(originalTitle: string, newTitle: string, newDescription: string, newStatus?: 'todo' | 'in_progress' | 'completed') {
+  async editTask(originalTitle: string, newTitle: string, newDescription: string, newStatus?: 'todo' | 'in_progress' | 'completed', newPriority?: 'low' | 'medium' | 'high') {
     const card = this.getTaskCard(originalTitle);
     await card.click(); // Click vào thân của thẻ task để mở modal chỉnh sửa
     await this.taskModal.waitFor({ state: 'visible' });
-    await this.fillTaskForm(newTitle, newDescription, newStatus);
+    await this.fillTaskForm(newTitle, newDescription, newStatus, newPriority);
     await this.saveTask();
+  }
+
+  async searchTask(keyword: string) {
+    await this.searchInput.fill(keyword);
+  }
+
+  async filterByPriority(priority: 'all' | 'low' | 'medium' | 'high') {
+    await this.priorityFilter.selectOption(priority);
   }
 
   async moveTaskForward(title: string) {

@@ -103,6 +103,23 @@
         </div>
       </div>
 
+      <!-- Bộ lọc và Tìm kiếm -->
+      <div class="glass-card filters-card">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="search-input" placeholder="Tìm kiếm công việc theo tiêu đề hoặc mô tả...">
+        </div>
+        <div class="filter-dropdown-wrapper">
+          <i class="fa-solid fa-filter"></i>
+          <select id="priority-filter">
+            <option value="all">Tất cả độ ưu tiên</option>
+            <option value="high">Độ ưu tiên: Cao</option>
+            <option value="medium">Độ ưu tiên: Trung bình</option>
+            <option value="low">Độ ưu tiên: Thấp</option>
+          </select>
+        </div>
+      </div>
+
       <!-- Task Columns -->
       <div class="board-columns">
         <!-- To Do Column -->
@@ -173,6 +190,14 @@
             <option value="todo">Cần Làm</option>
             <option value="in_progress">Đang Làm</option>
             <option value="completed">Đã Xong</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="task-priority">Độ Ưu Tiên</label>
+          <select id="task-priority">
+            <option value="low">Thấp</option>
+            <option value="medium" selected>Trung bình</option>
+            <option value="high">Cao</option>
           </select>
         </div>
         <div class="modal-footer">

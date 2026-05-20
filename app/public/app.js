@@ -37,6 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusGroup = document.getElementById('status-group');
   const cancelTaskBtn = document.getElementById('cancel-task-btn');
   const closeModalBtn = document.getElementById('close-modal-btn');
+  
+  // Các bộ lọc tìm kiếm và độ ưu tiên
+  const searchInput = document.getElementById('search-input');
+  const priorityFilter = document.getElementById('priority-filter');
+  const taskPriorityInput = document.getElementById('task-priority');
 
   // --- Kiểm tra đăng nhập ban đầu ---
   if (token) {
@@ -169,6 +174,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Lắng nghe sự kiện tìm kiếm và lọc độ ưu tiên
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      renderBoard();
+    });
+  }
+
+  if (priorityFilter) {
+    priorityFilter.addEventListener('change', () => {
+      renderBoard();
+    });
+  }
+
   // Gửi Form (Lưu hoặc cập nhật thông tin công việc)
   taskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -176,7 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskId = taskIdInput.value;
     const taskData = {
       title: taskTitleInput.value.trim(),
-      description: taskDescInput.value.trim()
+      description: taskDescInput.value.trim(),
+      priority: taskPriorityInput.value
     };
 
     let url = '/api/tasks';
@@ -242,7 +261,24 @@ document.addEventListener('DOMContentLoaded', () => {
     let progressCount = 0;
     let completedCount = 0;
 
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const selectedPriority = priorityFilter ? priorityFilter.value : 'all';
+
     tasks.forEach(task => {
+      // Áp dụng bộ lọc tìm kiếm và độ ưu tiên
+      if (searchTerm) {
+        const titleMatch = task.title && task.title.toLowerCase().includes(searchTerm);
+        const descMatch = task.description && task.description.toLowerCase().includes(searchTerm);
+        if (!titleMatch && !descMatch) {
+          return;
+        }
+      }
+
+      if (selectedPriority !== 'all') {
+        if (task.priority !== selectedPriority) {
+          return;
+        }
+      }
       const taskEl = createTaskCard(task);
 
       if (task.status === 'todo') {
@@ -283,11 +319,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    const priorityText = task.priority === 'high' ? 'Cao' : task.priority === 'low' ? 'Thấp' : 'Trung bình';
     card.innerHTML = `
       <div class="task-item-header">
         <span class="task-item-title">${escapeHtml(task.title)}</span>
       </div>
       ${task.description ? `<p class="task-item-desc">${escapeHtml(task.description)}</p>` : ''}
+      <div class="priority-badge priority-${task.priority || 'medium'}">${priorityText}</div>
       ${role !== 'viewer' ? `
         <div class="task-item-actions">
           ${task.status !== 'completed' ? `
@@ -350,6 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     taskTitleInput.value = task.title;
     taskDescInput.value = task.description || '';
     taskStatusSelect.value = task.status;
+    taskPriorityInput.value = task.priority || 'medium';
     statusGroup.style.display = 'block'; // Hiển thị ô chọn trạng thái khi chỉnh sửa
     taskModal.style.display = 'flex';
   }
