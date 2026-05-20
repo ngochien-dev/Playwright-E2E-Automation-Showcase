@@ -702,4 +702,135 @@ input:focus + i {
   color: #34d399;
 }
 
+/* Drawer styles */
+.drawer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 12, 41, 0.4);
+  backdrop-filter: blur(8px);
+  z-index: 1100;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.25s ease;
+}
+
+.drawer-card {
+  width: 420px;
+  max-width: 90%;
+  height: 100vh;
+  border-radius: 20px 0 0 20px;
+  border-right: none;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.drawer-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-primary);
+}
+
+.drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+/* Scrollbar styling for drawer */
+.drawer-content::-webkit-scrollbar {
+  width: 4px;
+}
+.drawer-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.drawer-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+/* Timeline Layout */
+.timeline {
+  position: relative;
+  padding-left: 1.5rem;
+  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  margin-left: 0.5rem;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 1.5rem;
+  animation: slideIn 0.3s ease;
+}
+
+.timeline-badge {
+  position: absolute;
+  left: -2.05rem; /* center on the 2px border */
+  top: 0.25rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #0f0c29;
+  background: #cbd5e1;
+}
+
+.badge-create { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+.badge-move { background: #6366f1; box-shadow: 0 0 8px rgba(99, 102, 241, 0.5); }
+.badge-update { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+.badge-delete { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.5); }
+.badge-reset { background: #ec4899; box-shadow: 0 0 8px rgba(236, 72, 153, 0.5); }
+
+.timeline-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.timeline-user {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #818cf8;
+}
+
+.timeline-time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.timeline-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.15rem;
+}
+
+.timeline-details {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+
 

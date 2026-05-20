@@ -30,6 +30,13 @@ export class DashboardPage extends BasePage {
   readonly priorityFilter: Locator;
   readonly taskPrioritySelect: Locator;
 
+  // Định vị Drawer Lịch sử hoạt động
+  readonly openActivityBtn: Locator;
+  readonly closeDrawerBtn: Locator;
+  readonly activityDrawer: Locator;
+  readonly activityList: Locator;
+  readonly timelineItems: Locator;
+
   constructor(page: Page) {
     super(page);
     this.userDisplayName = page.locator('#user-display-name');
@@ -58,6 +65,13 @@ export class DashboardPage extends BasePage {
     this.searchInput = page.locator('#search-input');
     this.priorityFilter = page.locator('#priority-filter');
     this.taskPrioritySelect = page.locator('#task-priority');
+
+    // Drawer
+    this.openActivityBtn = page.locator('#open-activity-btn');
+    this.closeDrawerBtn = page.locator('#close-drawer-btn');
+    this.activityDrawer = page.locator('#activity-drawer');
+    this.activityList = page.locator('#activity-list');
+    this.timelineItems = page.locator('#activity-list .timeline-item');
   }
 
   async logout() {
@@ -164,5 +178,19 @@ export class DashboardPage extends BasePage {
     await card.dragTo(targetList);
     // Đợi API cập nhật trạng thái task trả về thành công
     await this.page.waitForResponse(response => response.url().includes('/api/tasks/') && response.status() === 200);
+  }
+
+  async openActivityLogs() {
+    await this.openActivityBtn.click();
+    await this.activityDrawer.waitFor({ state: 'visible' });
+  }
+
+  async closeActivityLogs() {
+    await this.closeDrawerBtn.click();
+    await this.activityDrawer.waitFor({ state: 'hidden' });
+  }
+
+  async getActivityLogTexts(): Promise<string[]> {
+    return this.timelineItems.allTextContents();
   }
 }

@@ -45,6 +45,17 @@ function initializeDatabase() {
       )
     `);
 
+    db.run(`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        action TEXT,
+        task_title TEXT,
+        details TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Chèn user admin mặc định nếu chưa tồn tại
     db.run(
       `INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)`,
@@ -65,6 +76,15 @@ function initializeDatabase() {
   });
 }
 
+// Hàm tiện ích ghi nhận lịch sử hoạt động
+function logActivity(username, action, taskTitle, details, callback) {
+  db.run(
+    'INSERT INTO activity_logs (username, action, task_title, details) VALUES (?, ?, ?, ?)',
+    [username || 'Hệ thống', action, taskTitle || '', details || ''],
+    callback
+  );
+}
+
 // Middleware dùng để xác thực token gửi lên trong Header
 function authenticate(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -72,10 +92,10 @@ function authenticate(req, res, next) {
     return res.status(401).json({ error: 'Không có quyền truy cập. Token bị thiếu.' });
   }
   if (authHeader === 'Bearer mock-jwt-token-admin') {
-    req.user = { role: 'admin' };
+    req.user = { role: 'admin', username: 'admin' };
     next();
   } else if (authHeader === 'Bearer mock-jwt-token-viewer') {
-    req.user = { role: 'viewer' };
+    req.user = { role: 'viewer', username: 'viewer' };
     next();
   } else {
     return res.status(401).json({ error: 'Không có quyền truy cập. Token không hợp lệ.' });
@@ -142,12 +162,15 @@ app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
-      res.status(201).json({
-        id: this.lastID,
-        title,
-        description,
-        status: 'todo',
-        priority: taskPriority
+      const taskId = this.lastID;
+      logActivity(req.user.username, 'CREATE', title, `Đã tạo công việc mới (Độ ưu tiên: ${taskPriority === 'high' ? 'Cao' : taskPriority === 'low' ? 'Thấp' : 'Trung bình'})`, () => {
+        res.status(201).json({
+          id: taskId,
+          title,
+          description,
+          status: 'todo',
+          priority: taskPriority
+        });
       });
     }
   );
@@ -178,13 +201,21 @@ app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
         if (err) {
           return res.status(500).json({ error: err.message });
         }
-        res.json({
-          id: parseInt(id),
-          title: updatedTitle,
-          description: updatedDesc,
-          status: updatedStatus,
-          priority: updatedPriority
-        });
+        const sendResponse = () => {
+          res.json({
+            id: parseInt(id),
+            title: updatedTitle,
+            description: updatedDesc,
+            status: updatedStatus,
+            priority: updatedPriority
+          });
+        };
+        if (status !== undefined && status !== task.status) {
+          const statusMap = { 'todo': 'Cần Làm', 'in_progress': 'Đang Làm', 'completed': 'Đã Xong' };
+          logActivity(req.user.username, 'MOVE', updatedTitle, `Đã chuyển sang cột "${statusMap[updatedStatus]}"`, sendResponse);
+        } else {
+          logActivity(req.user.username, 'UPDATE', updatedTitle, 'Đã cập nhật chi tiết công việc', sendResponse);
+        }
       }
     );
   });
@@ -194,14 +225,29 @@ app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
 app.delete('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
   const { id } = req.params;
 
-  db.run('DELETE FROM tasks WHERE id = ?', [id], function (err) {
+  db.get('SELECT title FROM tasks WHERE id = ?', [id], (err, task) => {
+    if (err || !task) {
+      return res.status(404).json({ error: 'Không tìm thấy công việc.' });
+    }
+
+    db.run('DELETE FROM tasks WHERE id = ?', [id], function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      logActivity(req.user.username, 'DELETE', task.title, 'Đã xóa công việc', () => {
+        res.json({ message: 'Xóa công việc thành công.', id: parseInt(id) });
+      });
+    });
+  });
+});
+
+// API Lấy danh sách Lịch sử hoạt động
+app.get('/api/activities', authenticate, (req, res) => {
+  db.all('SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 50', [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Không tìm thấy công việc.' });
-    }
-    res.json({ message: 'Xóa công việc thành công.', id: parseInt(id) });
+    res.json(rows);
   });
 });
 
@@ -212,17 +258,24 @@ app.post('/api/db/reset', (req, res) => {
       if (err) {
         return res.status(500).json({ error: 'Không thể reset cơ sở dữ liệu.' });
       }
-      // Chèn lại task hệ thống mặc định để kiểm tra tính năng reset
-      db.run(
-        "INSERT INTO tasks (title, description, status, priority) VALUES (?, ?, ?, ?)",
-        ['Task hệ thống ban đầu', 'Task mặc định được tạo trong quá trình khởi tạo.', 'todo', 'high'],
-        (err) => {
-          if (err) {
-            return res.status(500).json({ error: 'Không thể chèn công việc mặc định.' });
+      // Dọn dẹp cả lịch sử hoạt động khi reset database để sạch môi trường test
+      db.run('DELETE FROM activity_logs', (err) => {
+        if (err) console.error('Lỗi khi xóa bảng logs:', err.message);
+        
+        // Chèn lại task hệ thống mặc định để kiểm tra tính năng reset
+        db.run(
+          "INSERT INTO tasks (title, description, status, priority) VALUES (?, ?, ?, ?)",
+          ['Task hệ thống ban đầu', 'Task mặc định được tạo trong quá trình khởi tạo.', 'todo', 'high'],
+          (err) => {
+            if (err) {
+              return res.status(500).json({ error: 'Không thể chèn công việc mặc định.' });
+            }
+            logActivity('Hệ thống', 'RESET', '-', 'Đã đặt lại cơ sở dữ liệu về mặc định', () => {
+              res.json({ message: 'Reset database thành công.' });
+            });
           }
-          res.json({ message: 'Reset database thành công.' });
-        }
-      );
+        );
+      });
     });
   });
 });

@@ -78,6 +78,10 @@
             <div class="avatar"><i class="fa-regular fa-user"></i></div>
             <span id="user-display-name">QA Tester</span>
           </div>
+          <button id="open-activity-btn" class="btn btn-secondary btn-sm" title="Lịch sử hoạt động">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>Lịch sử</span>
+          </button>
           <button id="logout-btn" class="btn btn-secondary btn-sm">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
             <span>Đăng xuất</span>
@@ -205,6 +209,21 @@
           <button type="submit" id="save-task-btn" class="btn btn-primary">Lưu Công Việc</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ================= ACTIVITY TIMELINE DRAWER ================= -->
+  <div id="activity-drawer" class="drawer-backdrop" style="display: none;">
+    <div class="glass-card drawer-card">
+      <div class="drawer-header">
+        <h3><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử Hoạt Động</h3>
+        <button id="close-drawer-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="drawer-content">
+        <div id="activity-list" class="timeline">
+          <!-- Các hoạt động được render động ở đây -->
+        </div>
+      </div>
     </div>
   </div>
 

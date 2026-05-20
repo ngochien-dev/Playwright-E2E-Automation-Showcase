@@ -43,6 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const priorityFilter = document.getElementById('priority-filter');
   const taskPriorityInput = document.getElementById('task-priority');
 
+  // Ngăn kéo lịch sử hoạt động
+  const openActivityBtn = document.getElementById('open-activity-btn');
+  const closeActivityBtn = document.getElementById('close-drawer-btn');
+  const activityDrawer = document.getElementById('activity-drawer');
+  const activityList = document.getElementById('activity-list');
+
   // --- Kiểm tra đăng nhập ban đầu ---
   if (token) {
     showDashboard();
@@ -187,6 +193,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Mở ngăn kéo lịch sử hoạt động
+  if (openActivityBtn) {
+    openActivityBtn.addEventListener('click', () => {
+      activityDrawer.style.display = 'flex';
+      fetchActivities();
+    });
+  }
+
+  // Đóng ngăn kéo lịch sử hoạt động
+  if (closeActivityBtn) {
+    closeActivityBtn.addEventListener('click', () => {
+      activityDrawer.style.display = 'none';
+    });
+  }
+
+  if (activityDrawer) {
+    activityDrawer.addEventListener('click', (e) => {
+      if (e.target === activityDrawer) {
+        activityDrawer.style.display = 'none';
+      }
+    });
+  }
+
   // Gửi Form (Lưu hoặc cập nhật thông tin công việc)
   taskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -246,6 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       tasks = await response.json();
       renderBoard();
+      await fetchActivities();
     } catch (err) {
       console.error('Lỗi khi fetch tasks:', err);
     }
@@ -456,6 +486,53 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  async function fetchActivities() {
+    if (!token) return;
+    try {
+      const response = await fetch('/api/activities', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Không thể tải lịch sử hoạt động');
+      const activities = await response.json();
+      renderActivities(activities);
+    } catch (err) {
+      console.error(err.message);
+    }
+  }
+
+  function renderActivities(activities) {
+    if (!activityList) return;
+    activityList.innerHTML = '';
+    
+    if (activities.length === 0) {
+      activityList.innerHTML = '<p class="text-muted" style="text-align: center; margin-top: 2rem;">Chưa có hoạt động nào được ghi nhận.</p>';
+      return;
+    }
+
+    activities.forEach(act => {
+      const item = document.createElement('div');
+      item.className = 'timeline-item';
+      
+      let badgeType = 'badge-update';
+      if (act.action === 'CREATE') badgeType = 'badge-create';
+      else if (act.action === 'MOVE') badgeType = 'badge-move';
+      else if (act.action === 'DELETE') badgeType = 'badge-delete';
+      else if (act.action === 'RESET') badgeType = 'badge-reset';
+
+      const formattedTime = new Date(act.created_at).toLocaleString('vi-VN');
+
+      item.innerHTML = `
+        <div class="timeline-badge ${badgeType}"></div>
+        <div class="timeline-meta">
+          <span class="timeline-user">@${escapeHtml(act.username)}</span>
+          <span class="timeline-time">${formattedTime}</span>
+        </div>
+        <div class="timeline-title">${act.task_title !== '-' ? `<strong>${escapeHtml(act.task_title)}</strong>: ` : ''}${escapeHtml(act.details)}</div>
+      `;
+      activityList.appendChild(item);
+    });
+  }
 
   // Hàm tiện ích để chuẩn hóa chuỗi HTML tránh các cuộc tấn công XSS
   function escapeHtml(string) {
