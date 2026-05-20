@@ -5,8 +5,8 @@ test.describe('Kiểm thử So Sánh Hình Ảnh Giao Diện (Visual Testing)', 
   let loginPage: LoginPage;
 
   test.beforeEach(async ({ page }) => {
-    // Bỏ qua kiểm thử visual trên môi trường CI (Linux) để tránh lệch font rendering so với Windows
-    if (process.env.CI) {
+    // Bỏ qua kiểm thử visual trên môi trường GitHub Actions CI (Linux) để tránh lệch font rendering so với Windows
+    if (process.env.GITHUB_ACTIONS) {
       test.skip(true, 'Bỏ qua kiểm thử so sánh hình ảnh trên CI');
     }
     loginPage = new LoginPage(page);
