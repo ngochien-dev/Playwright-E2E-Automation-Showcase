@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sleek Task Manager - QA Automation Target</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Background Glows -->
+  <div class="glow-bg glow-purple"></div>
+  <div class="glow-bg glow-blue"></div>
+
+  <div class="container">
+    <!-- ================= AUTH VIEW ================= -->
+    <div id="auth-view" class="glass-card auth-card">
+      <div class="auth-header">
+        <div class="logo">
+          <i class="fa-solid fa-list-check"></i>
+          <span>SleekTask</span>
+        </div>
+        <h2>Welcome Back</h2>
+        <p>Please enter your credentials to access the task dashboard.</p>
+      </div>
+
+      <form id="login-form">
+        <div class="alert error-alert" id="login-error" style="display: none;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span id="login-error-text">Invalid username or password</span>
+        </div>
+
+        <div class="form-group">
+          <label for="username">Username</label>
+          <div class="input-wrapper">
+            <i class="fa-regular fa-user"></i>
+            <input type="text" id="username" placeholder="e.g. admin" required autocomplete="username">
+          </div>
+          <span class="helper-text">Hint: <code>admin</code></span>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <i class="fa-regular fa-lock"></i>
+            <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <span class="helper-text">Hint: <code>password123</code></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="login-submit-btn">
+          <span>Sign In</span>
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- ================= DASHBOARD VIEW ================= -->
+    <div id="dashboard-view" class="dashboard-wrapper" style="display: none;">
+      <!-- Header -->
+      <header class="glass-card header-card">
+        <div class="header-left">
+          <div class="logo">
+            <i class="fa-solid fa-list-check"></i>
+            <span>SleekTask</span>
+          </div>
+          <div class="badge">QA Target App</div>
+        </div>
+        <div class="header-right">
+          <div class="user-profile">
+            <div class="avatar"><i class="fa-regular fa-user"></i></div>
+            <span id="user-display-name">QA Tester</span>
+          </div>
+          <button id="logout-btn" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Controls -->
+      <div class="dashboard-controls">
+        <div class="controls-left">
+          <h2>Task Board</h2>
+          <p>Manage and track your QA automation test scenarios.</p>
+        </div>
+        <div class="controls-right">
+          <button id="reset-db-btn" class="btn btn-warning">
+            <i class="fa-solid fa-rotate-left"></i>
+            <span>Reset Database</span>
+          </button>
+          <button id="open-add-task-btn" class="btn btn-primary">
+            <i class="fa-solid fa-plus"></i>
+            <span>Create Task</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Task Columns -->
+      <div class="board-columns">
+        <!-- To Do Column -->
+        <div class="column-card glass-card" id="col-todo">
+          <div class="column-header">
+            <div class="column-title">
+              <span class="dot dot-todo"></span>
+              <h3>To Do</h3>
+            </div>
+            <span class="task-count" id="count-todo">0</span>
+          </div>
+          <div class="task-list" id="list-todo">
+            <!-- Dynamic task items go here -->
+          </div>
+        </div>
+
+        <!-- In Progress Column -->
+        <div class="column-card glass-card" id="col-in-progress">
+          <div class="column-header">
+            <div class="column-title">
+              <span class="dot dot-progress"></span>
+              <h3>In Progress</h3>
+            </div>
+            <span class="task-count" id="count-in-progress">0</span>
+          </div>
+          <div class="task-list" id="list-in-progress">
+            <!-- Dynamic task items go here -->
+          </div>
+        </div>
+
+        <!-- Completed Column -->
+        <div class="column-card glass-card" id="col-completed">
+          <div class="column-header">
+            <div class="column-title">
+              <span class="dot dot-completed"></span>
+              <h3>Completed</h3>
+            </div>
+            <span class="task-count" id="count-completed">0</span>
+          </div>
+          <div class="task-list" id="list-completed">
+            <!-- Dynamic task items go here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TASK MODAL ================= -->
+  <div id="task-modal" class="modal-backdrop" style="display: none;">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title">Create New Task</h3>
+        <button id="close-modal-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="task-form">
+        <input type="hidden" id="task-id">
+        <div class="form-group">
+          <label for="task-title">Task Title</label>
+          <input type="text" id="task-title" placeholder="e.g. Automated UI test for dashboard" required>
+        </div>
+        <div class="form-group">
+          <label for="task-desc">Description</label>
+          <textarea id="task-desc" placeholder="Write detail checklist or steps to reproduce..." rows="4"></textarea>
+        </div>
+        <div class="form-group" id="status-group" style="display: none;">
+          <label for="task-status">Status</label>
+          <select id="task-status">
+            <option value="todo">To Do</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancel-task-btn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="save-task-btn" class="btn btn-primary">Save Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Custom Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>

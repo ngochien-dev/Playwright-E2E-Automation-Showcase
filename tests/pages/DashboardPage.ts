@@ -1,0 +1,132 @@
+import { Page, Locator } from '@playwright/test';
+import { BasePage } from './BasePage';
+
+export class DashboardPage extends BasePage {
+  readonly userDisplayName: Locator;
+  readonly logoutBtn: Locator;
+  readonly resetDbBtn: Locator;
+  readonly openAddTaskBtn: Locator;
+
+  // Định vị các Cột & Danh sách Task
+  readonly listTodo: Locator;
+  readonly listInProgress: Locator;
+  readonly listCompleted: Locator;
+
+  readonly countTodo: Locator;
+  readonly countInProgress: Locator;
+  readonly countCompleted: Locator;
+
+  // Định vị các phần tử trong Modal Form
+  readonly taskModal: Locator;
+  readonly modalTitle: Locator;
+  readonly taskTitleInput: Locator;
+  readonly taskDescInput: Locator;
+  readonly taskStatusSelect: Locator;
+  readonly saveTaskBtn: Locator;
+  readonly cancelTaskBtn: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.userDisplayName = page.locator('#user-display-name');
+    this.logoutBtn = page.locator('#logout-btn');
+    this.resetDbBtn = page.locator('#reset-db-btn');
+    this.openAddTaskBtn = page.locator('#open-add-task-btn');
+
+    this.listTodo = page.locator('#list-todo');
+    this.listInProgress = page.locator('#list-in-progress');
+    this.listCompleted = page.locator('#list-completed');
+
+    this.countTodo = page.locator('#count-todo');
+    this.countInProgress = page.locator('#count-in-progress');
+    this.countCompleted = page.locator('#count-completed');
+
+    // Modal
+    this.taskModal = page.locator('#task-modal');
+    this.modalTitle = page.locator('#modal-title');
+    this.taskTitleInput = page.locator('#task-title');
+    this.taskDescInput = page.locator('#task-desc');
+    this.taskStatusSelect = page.locator('#task-status');
+    this.saveTaskBtn = page.locator('#save-task-btn');
+    this.cancelTaskBtn = page.locator('#cancel-task-btn');
+  }
+
+  async logout() {
+    await this.logoutBtn.click();
+  }
+
+  async resetDatabase() {
+    await this.resetDbBtn.click();
+    // Đợi API reset database trả về response thành công
+    await this.page.waitForResponse(response => response.url().includes('/api/db/reset') && response.status() === 200);
+  }
+
+  async openCreateTaskModal() {
+    await this.openAddTaskBtn.click();
+    await this.taskModal.waitFor({ state: 'visible' });
+  }
+
+  async fillTaskForm(title: string, description: string = '', status?: 'todo' | 'in_progress' | 'completed') {
+    await this.taskTitleInput.fill(title);
+    await this.taskDescInput.fill(description);
+    if (status) {
+      await this.taskStatusSelect.selectOption(status);
+    }
+  }
+
+  async saveTask() {
+    await this.saveTaskBtn.click();
+    await this.taskModal.waitFor({ state: 'hidden' });
+  }
+
+  async createTask(title: string, description: string = '') {
+    await this.openCreateTaskModal();
+    await this.fillTaskForm(title, description);
+    await this.saveTask();
+  }
+
+  // Các hàm phụ trợ (helper) xử lý thẻ Task
+  getTaskCard(title: string): Locator {
+    return this.page.locator(`.task-item`, { hasText: title });
+  }
+
+  async editTask(originalTitle: string, newTitle: string, newDescription: string, newStatus?: 'todo' | 'in_progress' | 'completed') {
+    const card = this.getTaskCard(originalTitle);
+    await card.click(); // Click vào thân của thẻ task để mở modal chỉnh sửa
+    await this.taskModal.waitFor({ state: 'visible' });
+    await this.fillTaskForm(newTitle, newDescription, newStatus);
+    await this.saveTask();
+  }
+
+  async moveTaskForward(title: string) {
+    const card = this.getTaskCard(title);
+    const moveBtn = card.locator('.move-task');
+    await moveBtn.click();
+    // Đợi API cập nhật trạng thái task trả về thành công
+    await this.page.waitForResponse(response => response.url().includes('/api/tasks/') && response.status() === 200);
+  }
+
+  async deleteTask(title: string) {
+    const card = this.getTaskCard(title);
+    const deleteBtn = card.locator('.delete-task');
+    await deleteBtn.click();
+    // Đợi API xóa task trả về thành công
+    await this.page.waitForResponse(response => response.url().includes('/api/tasks/') && response.status() === 200);
+  }
+
+  async getColumnTaskCount(column: 'todo' | 'in_progress' | 'completed'): Promise<number> {
+    let countText = '';
+    if (column === 'todo') {
+      countText = await this.countTodo.innerText();
+    } else if (column === 'in_progress') {
+      countText = await this.countInProgress.innerText();
+    } else if (column === 'completed') {
+      countText = await this.countCompleted.innerText();
+    }
+    return parseInt(countText, 10);
+  }
+
+  async getUsername(): Promise<string> {
+    const text = await this.userDisplayName.textContent();
+    return text ? text.trim() : '';
+  }
+}
