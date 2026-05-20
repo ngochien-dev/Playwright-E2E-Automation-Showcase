@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // --- State ---
+  // --- Khởi tạo State ---
   let token = localStorage.getItem('token') || '';
   let username = localStorage.getItem('username') || '';
   let tasks = [];
 
-  // --- DOM Elements ---
+  // --- Tìm các thành phần DOM ---
   const authView = document.getElementById('auth-view');
   const dashboardView = document.getElementById('dashboard-view');
   const loginForm = document.getElementById('login-form');
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const countInProgress = document.getElementById('count-in-progress');
   const countCompleted = document.getElementById('count-completed');
 
-  // Modal elements
+  // Các phần tử của Modal Form
   const taskModal = document.getElementById('task-modal');
   const modalTitle = document.getElementById('modal-title');
   const taskForm = document.getElementById('task-form');
@@ -37,14 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelTaskBtn = document.getElementById('cancel-task-btn');
   const closeModalBtn = document.getElementById('close-modal-btn');
 
-  // --- Initial Check ---
+  // --- Kiểm tra đăng nhập ban đầu ---
   if (token) {
     showDashboard();
   } else {
     showAuth();
   }
 
-  // --- Views Toggling ---
+  // --- Điều khiển Ẩn/Hiện Màn hình ---
   function showAuth() {
     authView.style.display = 'block';
     dashboardView.style.display = 'none';
@@ -58,9 +58,9 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchTasks();
   }
 
-  // --- Event Listeners ---
+  // --- Lắng nghe sự kiện (Event Listeners) ---
 
-  // Login Submit
+  // Xử lý nộp form Đăng nhập
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.style.display = 'none';
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed');
+        throw new Error(data.error || 'Đăng nhập thất bại');
       }
 
       token = data.token;
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('token', token);
       localStorage.setItem('username', username);
 
-      // Reset form fields
+      // Xóa sạch các ô nhập liệu sau khi đăng nhập
       usernameInput.value = '';
       passwordInput.value = '';
 
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Logout
+  // Xử lý sự kiện Đăng xuất
   logoutBtn.addEventListener('click', () => {
     token = '';
     username = '';
@@ -109,9 +109,9 @@ document.addEventListener('DOMContentLoaded', () => {
     showAuth();
   });
 
-  // Reset Database
+  // Xử lý sự kiện click Reset Database
   resetDbBtn.addEventListener('click', async () => {
-    if (!confirm('Are you sure you want to delete all tasks and reset the database?')) {
+    if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ công việc và khôi phục cài đặt gốc Database không?')) {
       return;
     }
     await resetDatabase();
@@ -123,38 +123,38 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!response.ok) throw new Error('Reset failed');
+      if (!response.ok) throw new Error('Khôi phục cơ sở dữ liệu thất bại');
       await fetchTasks();
     } catch (err) {
-      alert('Error resetting database: ' + err.message);
+      alert('Lỗi reset database: ' + err.message);
     }
   }
 
-  // Modal Open for Create
+  // Mở Modal biểu mẫu để tạo công việc mới
   openAddTaskBtn.addEventListener('click', () => {
-    modalTitle.textContent = 'Create New Task';
+    modalTitle.textContent = 'Tạo Công Việc Mới';
     taskIdInput.value = '';
     taskTitleInput.value = '';
     taskDescInput.value = '';
-    statusGroup.style.display = 'none'; // Default is always "todo" for new tasks
+    statusGroup.style.display = 'none'; // Task mới tạo mặc định luôn có trạng thái "todo"
     taskModal.style.display = 'flex';
   });
 
-  // Modal Close
+  // Đóng Modal Form
   const closeModal = () => {
     taskModal.style.display = 'none';
   };
   closeModalBtn.addEventListener('click', closeModal);
   cancelTaskBtn.addEventListener('click', closeModal);
 
-  // Close modal when clicking outside card
+  // Đóng Modal khi người dùng click ra vùng tối bên ngoài card
   taskModal.addEventListener('click', (e) => {
     if (e.target === taskModal) {
       closeModal();
     }
   });
 
-  // Form Submit (Create or Edit Task)
+  // Gửi Form (Lưu hoặc cập nhật thông tin công việc)
   taskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -184,16 +184,16 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to save task');
+      if (!response.ok) throw new Error(data.error || 'Không thể lưu công việc');
 
       closeModal();
       await fetchTasks();
     } catch (err) {
-      alert('Error saving task: ' + err.message);
+      alert('Lỗi lưu công việc: ' + err.message);
     }
   });
 
-  // --- API Calls & UI Rendering ---
+  // --- Gọi API & Dựng dữ liệu lên Giao diện (Render) ---
 
   async function fetchTasks() {
     try {
@@ -203,22 +203,22 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       if (response.status === 401) {
-        // Token expired/invalid, logout
+        // Token hết hạn hoặc không hợp lệ, đăng xuất ngay
         logoutBtn.click();
         return;
       }
 
-      if (!response.ok) throw new Error('Failed to fetch tasks');
+      if (!response.ok) throw new Error('Không thể tải danh sách công việc');
 
       tasks = await response.json();
       renderBoard();
     } catch (err) {
-      console.error('Error fetching tasks:', err);
+      console.error('Lỗi khi fetch tasks:', err);
     }
   }
 
   function renderBoard() {
-    // Clear list columns
+    // Xóa sạch dữ liệu cũ trong các cột trước khi render mới
     listTodo.innerHTML = '';
     listInProgress.innerHTML = '';
     listCompleted.innerHTML = '';
@@ -242,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Update counters
+    // Cập nhật lại số đếm hiển thị ở đầu các cột
     countTodo.textContent = todoCount;
     countInProgress.textContent = progressCount;
     countCompleted.textContent = completedCount;
@@ -261,26 +261,26 @@ document.addEventListener('DOMContentLoaded', () => {
       ${task.description ? `<p class="task-item-desc">${escapeHtml(task.description)}</p>` : ''}
       <div class="task-item-actions">
         ${task.status !== 'completed' ? `
-          <button class="action-icon move-task" title="Move task forward" data-id="${task.id}" data-status="${task.status}">
+          <button class="action-icon move-task" title="Chuyển trạng thái" data-id="${task.id}" data-status="${task.status}">
             <i class="fa-solid fa-circle-arrow-right"></i>
           </button>
         ` : ''}
-        <button class="action-icon edit-task" title="Edit task" data-id="${task.id}">
+        <button class="action-icon edit-task" title="Chỉnh sửa" data-id="${task.id}">
           <i class="fa-solid fa-pen-to-square"></i>
         </button>
-        <button class="action-icon delete-task" title="Delete task" data-id="${task.id}">
+        <button class="action-icon delete-task" title="Xóa bỏ" data-id="${task.id}">
           <i class="fa-solid fa-trash-can"></i>
         </button>
       </div>
     `;
 
-    // Click on card body to view/edit (excluding buttons)
+    // Click vào vùng thân thẻ task để mở modal chỉnh sửa (bỏ qua nếu click trúng nút icon hành động)
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.action-icon')) return; // Ignore button clicks
+      if (e.target.closest('.action-icon')) return;
       openEditModal(task);
     });
 
-    // Event listeners for action buttons
+    // Event listener cho nút chuyển trạng thái nhanh
     const moveBtn = card.querySelector('.move-task');
     if (moveBtn) {
       moveBtn.addEventListener('click', async (e) => {
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     card.querySelector('.delete-task').addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (confirm('Delete this task?')) {
+      if (confirm('Bạn có chắc chắn muốn xóa công việc này không?')) {
         await deleteTask(task.id);
       }
     });
@@ -307,12 +307,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function openEditModal(task) {
-    modalTitle.textContent = 'Edit Task';
+    modalTitle.textContent = 'Chỉnh Sửa Công Việc';
     taskIdInput.value = task.id;
     taskTitleInput.value = task.title;
     taskDescInput.value = task.description || '';
     taskStatusSelect.value = task.status;
-    statusGroup.style.display = 'block'; // Show status choice when editing
+    statusGroup.style.display = 'block'; // Hiển thị ô chọn trạng thái khi chỉnh sửa
     taskModal.style.display = 'flex';
   }
 
@@ -327,10 +327,10 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ status: newStatus })
       });
 
-      if (!response.ok) throw new Error('Failed to update task status');
+      if (!response.ok) throw new Error('Không thể cập nhật trạng thái công việc');
       await fetchTasks();
     } catch (err) {
-      alert('Error updating status: ' + err.message);
+      alert('Lỗi cập nhật trạng thái: ' + err.message);
     }
   }
 
@@ -341,14 +341,14 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (!response.ok) throw new Error('Failed to delete task');
+      if (!response.ok) throw new Error('Không thể xóa công việc');
       await fetchTasks();
     } catch (err) {
-      alert('Error deleting task: ' + err.message);
+      alert('Lỗi khi xóa: ' + err.message);
     }
   }
 
-  // Utility to escape HTML entities (XSS prevention)
+  // Hàm tiện ích để chuẩn hóa chuỗi HTML tránh các cuộc tấn công XSS
   function escapeHtml(string) {
     const map = {
       '&': '&amp;',

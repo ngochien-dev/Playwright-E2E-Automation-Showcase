@@ -1,20 +1,21 @@
 # Web Automation Testing Showcase Project 🚀
 
-This is a comprehensive, production-ready Web Automation Test Suite designed to showcase QA Engineering skills including UI Automation, API Testing, Database Assertions, Dockerization, and CI/CD setup. 
+This is a comprehensive, production-ready Web Automation Testing Showcase Project designed to demonstrate modern QA automation engineering competencies. It features a **fully functional target web application** (SleekTask Manager) and a robust **Playwright automation suite** that tests across multiple system boundaries: UI, API, Network, and the Database layer.
 
-The project features a **self-contained target application** (a sleek dark-mode Task Manager) and an automated test suite verifying system integrations across UI, HTTP API, and DB boundaries.
+The target application has been localized to Vietnamese (representing localized market application testing), while the automated test suite contains English specs, full Page Object Model (POM) abstractions, visual regression checks, API mocking, and data-driven validations.
 
 ---
 
-## 🛠️ Tech Stack Mapping (Matching CV Profile)
+## 🛠️ Tech Stack & Tooling
 
-- **Languages:** JavaScript/TypeScript (Node.js)
-- **Target Web App:** Express.js, HTML5, HSL-tailored CSS Grid, Vanilla JS Single Page App (SPA)
-- **Database:** SQLite (Embedded DB queried directly via SQL in testing)
-- **Automation Framework:** Playwright Test Runner (TypeScript)
+- **Language:** TypeScript & Node.js
+- **Target Web App:** Express.js, HTML5, modern HSL CSS Grid, Vanilla JS Single Page App (SPA)
+- **Database:** SQLite (Embedded DB queried directly via SQL during test verification)
+- **Automation Runner:** Playwright Test Runner (TypeScript)
 - **Design Pattern:** Page Object Model (POM)
 - **DevOps & Containers:** Docker, Docker Compose
-- **CI/CD:** GitHub Actions Workflows
+- **CI/CD Integration:** GitHub Actions Workflows
+- **Configuration:** Dynamic environment variables via `dotenv`
 
 ---
 
@@ -22,104 +23,125 @@ The project features a **self-contained target application** (a sleek dark-mode 
 
 ```text
 ├── .github/workflows/
-│   └── playwright.yml         # GitHub Actions CI/CD Pipeline
+│   └── playwright.yml         # CI/CD pipeline for automated test execution on GitHub Actions
 ├── app/
 │   ├── public/
-│   │   ├── app.js             # Client SPA application logic
-│   │   ├── index.html         # Modern HTML layout
-│   │   └── styles.css         # Glassmorphism dark mode styles
-│   ├── database.sqlite        # SQLite local DB file (created on runtime)
-│   └── server.js              # Express API Server and REST backend
+│   │   ├── app.js             # Client-side SPA interaction logic (Vietnamese comments)
+│   │   ├── index.html         # Frontend DOM layout
+│   │   └── styles.css         # Modern Glassmorphic UI styling
+│   ├── database.sqlite        # SQLite DB file (generated automatically, gitignored)
+│   └── server.js              # Express REST API Server (Vietnamese comments)
 ├── tests/
 │   ├── api/
-│   │   └── tasks-api.spec.ts  # REST API testing (mimicking automated Postman checks)
+│   │   └── tasks-api.spec.ts  # REST API Testing (JWT Auth, HTTP Status Codes, payload assertions)
+│   ├── data/
+│   │   └── tasks-data.json    # Parameterized dataset for Data-Driven Testing (DDT)
 │   ├── db/
-│   │   └── db-check.spec.ts   # Direct database verification using SQL queries
+│   │   └── db-check.spec.ts   # DB Verification: Queries SQLite directly using raw SQL
 │   ├── pages/
-│   │   ├── BasePage.ts        # Common page utility parent class
-│   │   ├── LoginPage.ts       # POM implementation of Login flow
-│   │   └── DashboardPage.ts   # POM implementation of Task board actions
-│   └── ui/
-│       ├── auth.spec.ts       # Authentication UI validation tests
-│       └── tasks.spec.ts      # Task CRUD dashboard UI tests
-├── Dockerfile                 # Container setup for Web Application
-├── docker-compose.yml         # Local orchestration of app & tests
-├── playwright.config.ts       # Playwright execution configuration
-├── tsconfig.json              # TypeScript compiler settings
-└── package.json               # Node dependency mappings and run scripts
+│   │   ├── BasePage.ts        # POM: Core base page utility class
+│   │   ├── LoginPage.ts       # POM: Object mapping for the authentication view
+│   │   └── DashboardPage.ts   # POM: Object mapping for the task manager dashboard
+│   ├── ui/
+│   │   ├── auth.spec.ts       # UI Login & Auth flow verification
+│   │   ├── ddt-tasks.spec.ts  # Parameterized Data-Driven UI testing
+│   │   ├── network-mock.spec.ts # Network interception & API Response Mocking (`page.route`)
+│   │   └── tasks.spec.ts      # End-to-end task CRUD flows on the UI board
+│   └── visual/
+│       ├── visual.spec.ts     # Visual Regression & Snapshot Testing
+│       └── visual.spec.ts-snapshots/ # Platform baseline reference screenshots
+├── Dockerfile                 # Multi-stage build Dockerfile for the web application
+├── docker-compose.yml         # Orchestrates target app health checks & Playwright container tests
+├── playwright.config.ts       # Global Playwright configurations
+├── tsconfig.json              # TypeScript compilation configurations
+├── .env.example               # Template environment configuration file
+├── .env                       # Local environment configurations (gitignored)
+└── package.json               # Package dependencies and run scripts
 ```
 
 ---
 
-## ⚙️ How to Setup and Run Locally
+## ⚙️ Installation & Test Execution
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v18 or v20 recommended)
-- [Docker & Docker Compose](https://www.docker.com/) (Optional, for containerized runs)
+- [Docker & Docker Compose](https://www.docker.com/) (Optional, for containerized execution)
 
-### Method 1: Running Directly on Local Host
+### Method 1: Local Host Execution
 
-1. **Install dependencies:**
+1. **Install Node.js dependencies:**
    ```bash
    npm install
    ```
 
-2. **Install Playwright browsers:**
+2. **Configure Environment Variables:**
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Install Playwright Browsers:**
    ```bash
    npx playwright install
    ```
 
-3. **Start the Web Application:**
+4. **Start the Target Web Application:**
    ```bash
    npm run start:app
    ```
-   *The target web app will be available at [http://localhost:3000](http://localhost:3000). You can log in manually using username `admin` and password `password123`.*
+   *The application will start at [http://localhost:3000](http://localhost:3000). You can log in manually using username: `admin` and password: `password123`.*
 
-4. **Execute the automation test suite:**
-   *Open a separate terminal window and run:*
+5. **Run the Automated Test Suite:**
+   *Open a new terminal window and run:*
    ```bash
    npm run test
    ```
 
-5. **View the interactive HTML test report:**
+6. **View HTML Test Report:**
    ```bash
    npm run test:report
    ```
 
 ---
 
-### Method 2: Running via Docker (Fully Containerized)
+### Method 2: Containerized Execution (Docker Compose)
 
-Verify container execution and orchestration using Docker Compose:
+To verify the test suite in a clean, isolated container environment matching CI:
 
-1. **Build and run target application + tests:**
+1. **Start target app & run tests automatically via Docker Compose:**
    ```bash
    docker-compose up --build
    ```
-   *This commands automatically spins up the target web app container, runs a health check to make sure it's active, runs the Playwright test suite in a headless Linux environment container, and prints test logs to terminal.*
+   *This command spins up the Express target app, verifies its health check status, launches a headless Playwright container to run the suite, and outputs test execution logs directly to the console.*
 
 ---
 
-## 🧪 Test Coverage Breakdown
+## 🧪 Testing Coverage Details
 
-### 1. UI Automation Tests (`tests/ui/`)
-Adheres strictly to the **Page Object Model (POM)** structure.
-- **`auth.spec.ts`**: Verifies login form layouts, incorrect credentials showing proper error flags, successful authentication redirects, and local storage token cleanup on logout.
-- **`tasks.spec.ts`**: Verifies task card creations, task details loading, moving tasks through columns ("To Do" -> "In Progress" -> "Completed"), modal edits, and deletion triggers.
+### 1. E2E UI Testing (`tests/ui/`)
+Utilizes a modular **Page Object Model (POM)** structure.
+- **`auth.spec.ts`**: Verifies login form rendering, invalid credentials validation alerts, successful session redirection, and secure logout.
+- **`tasks.spec.ts`**: Validates task creation, column state progression (To Do ➔ In Progress ➔ Completed), detail updates via modals, and task deletion.
 
-### 2. API Automated Tests (`tests/api/`)
-Performs raw API contract testing using Playwright's `request` interface.
-- **`tasks-api.spec.ts`**: Validates request validation headers (`Authorization`), verifies JWT token retrievals from login request payloads, asserts proper CRUD response status codes (201 Created, 200 OK, 401 Unauthorized), and payload formats.
+### 2. Visual Regression Testing (`tests/visual/`)
+- **`visual.spec.ts`**: Uses `expect(locator).toHaveScreenshot()` to capture specific layout blocks (Login panel, Dashboard headers) and compares them against baselines to verify layout integrity (detecting font rendering shifts, color changes, and alignment issues).
 
-### 3. Database Validation Tests (`tests/db/`)
-Connects directly to SQLite database using SQL statements during execution.
-- **`db-check.spec.ts`**: Validates data persistence. Asserts that task creations triggered via UI or API are written exactly as rows in the SQL table `tasks`, testing integration boundaries.
+### 3. API Mocking & Network Interception (`tests/ui/network-mock.spec.ts`)
+- **`network-mock.spec.ts`**: Intercepts outgoing HTTP calls (`GET /api/tasks`) using `page.route` to return pre-defined mock datasets. This ensures the frontend layout can be tested independently of DB states or backend availability.
+
+### 4. Data-Driven Testing (DDT) (`tests/ui/ddt-tasks.spec.ts`)
+- **`ddt-tasks.spec.ts`**: Sources multiple testing profiles dynamically from an external JSON file (`tests/data/tasks-data.json`), loop-validating sequential scenarios dynamically.
+
+### 5. REST API Testing (`tests/api/`)
+- **`tasks-api.spec.ts`**: Bypasses the UI browser to verify backend HTTP endpoints directly. Tests token validation (JWT), correct HTTP response status codes (200 OK, 201 Created, 401 Unauthorized), and response JSON schema properties.
+
+### 6. Database Layer Validation (`tests/db/`)
+- **`db-check.spec.ts`**: Directly connects to the physical SQLite database using `sqlite3` driver. Executes queries on the database after UI and API operations to verify physical record synchronization (ensuring data integrity between frontend and database disk).
 
 ---
 
-## 🛡️ Key Automation Best Practices Implemented
+## 🛡️ Best Practices & Design Patterns Applied
 
-- **Page Object Model (POM):** Decoupled locators from test logic for maximum maintainability.
-- **DB Reset Teardown API:** The backend exposes a `/api/db/reset` endpoint triggered before tests to clear mock tables and initialize default entries, preventing test cross-contamination.
-- **Serial Worker Execution:** Configured single-threaded workers (`workers: 1`) to ensure SQLite database transaction integrity during test executions.
-- **Automatic Test Artifacts:** Configured Playwright to capture screenshots and record videos *only on test failure* to assist in triage and debugging.
+- **Auto-Retrying Web Assertions:** Exclusively uses Playwright's dynamic wait assertions (e.g. `toHaveText`, `toBeVisible`) to prevent flaky test execution due to network latency or database read delays.
+- **Database Reset Teardown API:** Integrates a dedicated `/api/db/reset` API endpoint invoked in `beforeEach` setups to ensure every test run starts with a clean database state.
+- **Serial Test Execution:** Configured `workers: 1` in `playwright.config.ts` to prevent database write conflicts/locks on the embedded SQLite file.
+- **Auto-Capture Diagnostics:** Configured to capture screenshots and video recordings *only on failure* to aid debugging.

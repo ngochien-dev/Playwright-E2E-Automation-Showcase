@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/LoginPage';
 import { DashboardPage } from '../pages/DashboardPage';
 
-test.describe('Task Management (CRUD) Tests', () => {
+test.describe('Kiểm thử Quản Lý Công Việc (CRUD)', () => {
   let loginPage: LoginPage;
   let dashboardPage: DashboardPage;
 
@@ -21,18 +21,18 @@ test.describe('Task Management (CRUD) Tests', () => {
     await dashboardPage.resetDatabase();
   });
 
-  test('should display initial default task after database reset', async () => {
+  test('nên hiển thị task mặc định hệ thống sau khi reset cơ sở dữ liệu', async () => {
     // Xác minh hiển thị của task hệ thống được tạo tự động sau khi reset
-    const initialTask = dashboardPage.getTaskCard('Initial System Task');
+    const initialTask = dashboardPage.getTaskCard('Task hệ thống ban đầu');
     await expect(initialTask).toBeVisible();
-    await expect(initialTask.locator('.task-item-desc')).toHaveText('Default task created during reset setup.');
+    await expect(initialTask.locator('.task-item-desc')).toHaveText('Task mặc định được tạo trong quá trình khởi tạo.');
     
     await expect(dashboardPage.countTodo).toHaveText('1');
   });
 
-  test('should create a new task and add it to To Do column', async () => {
-    const taskTitle = 'Write Playwright Test Suite';
-    const taskDesc = 'Write POM classes, setup config, and run validation specs.';
+  test('nên tạo công việc mới và thêm vào cột Cần Làm', async () => {
+    const taskTitle = 'Viết bộ test tự động Playwright';
+    const taskDesc = 'Viết các class POM, cài đặt cấu hình và chạy các file kiểm thử.';
 
     await dashboardPage.createTask(taskTitle, taskDesc);
 
@@ -41,14 +41,14 @@ test.describe('Task Management (CRUD) Tests', () => {
     await expect(taskCard).toBeVisible();
     await expect(taskCard.locator('.task-item-desc')).toHaveText(taskDesc);
 
-    // Xác minh bộ đếm số lượng task ở cột To Do tăng lên
+    // Xác minh bộ đếm số lượng task ở cột Cần Làm tăng lên
     await expect(dashboardPage.countTodo).toHaveText('2'); // Gồm task mặc định + task mới tạo
   });
 
-  test('should update task details and move to another column via modal', async () => {
-    const originalTitle = 'Initial System Task';
-    const newTitle = 'Review Team Code';
-    const newDesc = 'Inspect MR submissions and run tests locally.';
+  test('nên cập nhật chi tiết công việc và chuyển sang cột khác qua modal', async () => {
+    const originalTitle = 'Task hệ thống ban đầu';
+    const newTitle = 'Xem lại code của nhóm';
+    const newDesc = 'Kiểm tra các yêu cầu gộp code và chạy thử test cục bộ.';
 
     // Sửa thông tin task và thay đổi cột trạng thái thông qua Modal Form
     await dashboardPage.editTask(originalTitle, newTitle, newDesc, 'in_progress');
@@ -57,36 +57,36 @@ test.describe('Task Management (CRUD) Tests', () => {
     const oldCard = dashboardPage.getTaskCard(originalTitle);
     await expect(oldCard).toBeHidden();
 
-    // Xác minh task với tên mới đã được chuyển sang cột In Progress
+    // Xác minh task với tên mới đã được chuyển sang cột Đang Làm
     const newCard = dashboardPage.getTaskCard(newTitle);
     await expect(newCard).toBeVisible();
     await expect(newCard.locator('.task-item-desc')).toHaveText(newDesc);
 
-    // Xác minh số lượng task ở cột To Do và In Progress cập nhật đúng
+    // Xác minh số lượng task ở cột Cần Làm và Đang Làm cập nhật đúng
     await expect(dashboardPage.countTodo).toHaveText('0');
     await expect(dashboardPage.countInProgress).toHaveText('1');
   });
 
-  test('should move task along columns via quick action move button', async () => {
-    const taskTitle = 'Initial System Task';
+  test('nên di chuyển công việc qua các cột bằng nút di chuyển nhanh', async () => {
+    const taskTitle = 'Task hệ thống ban đầu';
 
-    // Click nút chuyển nhanh từ cột To Do -> In Progress
+    // Click nút chuyển nhanh từ cột Cần Làm -> Đang Làm
     await dashboardPage.moveTaskForward(taskTitle);
     await expect(dashboardPage.countTodo).toHaveText('0');
     await expect(dashboardPage.countInProgress).toHaveText('1');
 
-    // Click nút chuyển nhanh từ cột In Progress -> Completed
+    // Click nút chuyển nhanh từ cột Đang Làm -> Đã Xong
     await dashboardPage.moveTaskForward(taskTitle);
     await expect(dashboardPage.countInProgress).toHaveText('0');
     await expect(dashboardPage.countCompleted).toHaveText('1');
 
-    // Xác minh rằng các task ở cột Completed sẽ không hiển thị nút chuyển trạng thái tiếp nữa
+    // Xác minh rằng các task ở cột Đã Xong sẽ không hiển thị nút chuyển trạng thái tiếp nữa
     const completedCard = dashboardPage.getTaskCard(taskTitle);
     await expect(completedCard.locator('.move-task')).toBeHidden();
   });
 
-  test('should delete a task and update dashboard metrics', async () => {
-    const taskTitle = 'Initial System Task';
+  test('nên xóa công việc và cập nhật bộ đếm trên bảng công việc', async () => {
+    const taskTitle = 'Task hệ thống ban đầu';
 
     // Thực hiện thao tác xóa task
     await dashboardPage.deleteTask(taskTitle);

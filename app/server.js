@@ -57,7 +57,7 @@ function initializeDatabase() {
 function authenticate(req, res, next) {
   const authHeader = req.headers['authorization'];
   if (!authHeader || authHeader !== 'Bearer mock-jwt-token-12345') {
-    return res.status(401).json({ error: 'Unauthorized. Invalid or missing token.' });
+    return res.status(401).json({ error: 'Không có quyền truy cập. Token không hợp lệ hoặc bị thiếu.' });
   }
   next();
 }
@@ -68,7 +68,7 @@ function authenticate(req, res, next) {
 app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password are required.' });
+    return res.status(400).json({ error: 'Tên đăng nhập và mật khẩu không được bỏ trống.' });
   }
 
   db.get(
@@ -79,7 +79,7 @@ app.post('/api/auth/login', (req, res) => {
         return res.status(500).json({ error: err.message });
       }
       if (!user) {
-        return res.status(401).json({ error: 'Invalid username or password.' });
+        return res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không chính xác.' });
       }
       // Trả về token mock đơn giản để xác thực ở các API sau
       res.json({ token: 'mock-jwt-token-12345', username: user.username });
@@ -101,7 +101,7 @@ app.get('/api/tasks', authenticate, (req, res) => {
 app.post('/api/tasks', authenticate, (req, res) => {
   const { title, description } = req.body;
   if (!title) {
-    return res.status(400).json({ error: 'Title is required.' });
+    return res.status(400).json({ error: 'Tiêu đề công việc là bắt buộc.' });
   }
 
   db.run(
@@ -131,7 +131,7 @@ app.put('/api/tasks/:id', authenticate, (req, res) => {
       return res.status(500).json({ error: err.message });
     }
     if (!task) {
-      return res.status(404).json({ error: 'Task not found.' });
+      return res.status(404).json({ error: 'Không tìm thấy công việc.' });
     }
 
     const updatedTitle = title !== undefined ? title : task.title;
@@ -165,9 +165,9 @@ app.delete('/api/tasks/:id', authenticate, (req, res) => {
       return res.status(500).json({ error: err.message });
     }
     if (this.changes === 0) {
-      return res.status(404).json({ error: 'Task not found.' });
+      return res.status(404).json({ error: 'Không tìm thấy công việc.' });
     }
-    res.json({ message: 'Task deleted successfully.', id: parseInt(id) });
+    res.json({ message: 'Xóa công việc thành công.', id: parseInt(id) });
   });
 });
 
@@ -176,17 +176,17 @@ app.post('/api/db/reset', (req, res) => {
   db.serialize(() => {
     db.run('DELETE FROM tasks', (err) => {
       if (err) {
-        return res.status(500).json({ error: 'Failed to reset tasks database.' });
+        return res.status(500).json({ error: 'Không thể reset cơ sở dữ liệu.' });
       }
       // Chèn lại task hệ thống mặc định để kiểm tra tính năng reset
       db.run(
         "INSERT INTO tasks (title, description, status) VALUES (?, ?, ?)",
-        ['Initial System Task', 'Default task created during reset setup.', 'todo'],
+        ['Task hệ thống ban đầu', 'Task mặc định được tạo trong quá trình khởi tạo.', 'todo'],
         (err) => {
           if (err) {
-            return res.status(500).json({ error: 'Failed to insert default task.' });
+            return res.status(500).json({ error: 'Không thể chèn công việc mặc định.' });
           }
-          res.json({ message: 'Database reset completed successfully.' });
+          res.json({ message: 'Reset database thành công.' });
         }
       );
     });
@@ -200,5 +200,5 @@ app.get('*', (req, res) => {
 
 // Khởi động Express Server
 app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
+  console.log(`Server đang chạy tại http://localhost:${PORT}`);
 });

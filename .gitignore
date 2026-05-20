@@ -20,3 +20,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Environment configuration
+.env
+

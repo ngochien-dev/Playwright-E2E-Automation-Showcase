@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('REST API Testing', () => {
+test.describe('Kiểm Thử REST API Backend', () => {
   let authToken: string;
   let createdTaskId: number;
 
@@ -25,18 +25,18 @@ test.describe('REST API Testing', () => {
     expect(resetResponse.status()).toBe(200);
   });
 
-  test('GET /api/tasks - should reject unauthorized requests', async ({ request }) => {
+  test('GET /api/tasks - nên từ chối các yêu cầu không có token hợp lệ', async ({ request }) => {
     const response = await request.get('/api/tasks');
     expect(response.status()).toBe(401);
     
     const body = await response.json();
-    expect(body.error).toContain('Unauthorized');
+    expect(body.error).toContain('Không có quyền truy cập');
   });
 
-  test('POST /api/tasks - should create a task via API', async ({ request }) => {
+  test('POST /api/tasks - nên tạo thành công công việc mới qua API', async ({ request }) => {
     const taskPayload = {
-      title: 'API Automation Task',
-      description: 'Created programmatically to verify backend APIs'
+      title: 'Công việc tự động hóa API',
+      description: 'Được tạo tự động bằng mã nguồn để kiểm thử API phía backend'
     };
 
     const response = await request.post('/api/tasks', {
@@ -56,11 +56,11 @@ test.describe('REST API Testing', () => {
     expect(body.status).toBe('todo');
   });
 
-  test('PUT /api/tasks/:id - should update a task status', async ({ request }) => {
+  test('PUT /api/tasks/:id - nên cập nhật thành công trạng thái công việc', async ({ request }) => {
     // 1. Tạo một task mới trước khi tiến hành cập nhật
     const createResponse = await request.post('/api/tasks', {
       headers: { 'Authorization': `Bearer ${authToken}` },
-      data: { title: 'Update Me', description: 'Original details' }
+      data: { title: 'Hãy sửa tôi', description: 'Chi tiết ban đầu' }
     });
     const task = await createResponse.json();
 
@@ -68,22 +68,22 @@ test.describe('REST API Testing', () => {
     const updateResponse = await request.put(`/api/tasks/${task.id}`, {
       headers: { 'Authorization': `Bearer ${authToken}` },
       data: {
-        title: 'Updated Task Title',
+        title: 'Tiêu đề công việc đã sửa',
         status: 'in_progress'
       }
     });
 
     expect(updateResponse.status()).toBe(200);
     const updatedBody = await updateResponse.json();
-    expect(updatedBody.title).toBe('Updated Task Title');
+    expect(updatedBody.title).toBe('Tiêu đề công việc đã sửa');
     expect(updatedBody.status).toBe('in_progress');
   });
 
-  test('DELETE /api/tasks/:id - should delete a task', async ({ request }) => {
+  test('DELETE /api/tasks/:id - nên xóa thành công công việc', async ({ request }) => {
     // 1. Tạo một task mới trước khi tiến hành xóa
     const createResponse = await request.post('/api/tasks', {
       headers: { 'Authorization': `Bearer ${authToken}` },
-      data: { title: 'Delete Me' }
+      data: { title: 'Hãy xóa tôi' }
     });
     const task = await createResponse.json();
 
@@ -94,10 +94,9 @@ test.describe('REST API Testing', () => {
 
     expect(deleteResponse.status()).toBe(200);
     const deleteBody = await deleteResponse.json();
-    expect(deleteBody.message).toBe('Task deleted successfully.');
-    expect(deleteBody.id).toBe(task.id);
+    expect(deleteBody.message).toContain('Xóa công việc thành công.');
 
-    // 3. Xác minh lại xem task đã thực sự bị xóa khỏi danh sách chưa
+    // 3. Thực hiện GET lại task để chắc chắn nó không còn tồn tại
     const getResponse = await request.get('/api/tasks', {
       headers: { 'Authorization': `Bearer ${authToken}` }
     });

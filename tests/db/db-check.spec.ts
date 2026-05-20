@@ -5,7 +5,7 @@ import path from 'path';
 // Định nghĩa đường dẫn file database
 const DB_PATH = path.resolve(__dirname, '../../app/database.sqlite');
 
-test.describe('Database Integrity Verification', () => {
+test.describe('Xác Minh Tính Toàn Vẹn Của Cơ Sở Dữ Liệu (DB Testing)', () => {
   let db: sqlite3.Database;
 
   // Hàm helper để thực thi câu lệnh SQL trả về một Promise
@@ -28,7 +28,7 @@ test.describe('Database Integrity Verification', () => {
     db.close();
   });
 
-  test('Database Schema Verification', async () => {
+  test('Xác minh cấu trúc Schema của Cơ sở dữ liệu', async () => {
     // Kiểm tra xem các bảng dữ liệu có tồn tại trong schema không
     const tables = await queryAll("SELECT name FROM sqlite_master WHERE type='table'");
     const tableNames = tables.map(t => t.name);
@@ -37,14 +37,14 @@ test.describe('Database Integrity Verification', () => {
     expect(tableNames).toContain('tasks');
   });
 
-  test('UI/API CRUD to DB Sync Verification', async ({ request }) => {
+  test('Xác minh đồng bộ dữ liệu CRUD từ UI/API xuống Database', async ({ request }) => {
     // 1. Trước tiên, thực hiện reset Database qua API endpoint để dọn sạch dữ liệu cũ
     await request.post('/api/db/reset');
 
     // 2. Truy vấn trực tiếp DB: Kiểm tra xem task mặc định ban đầu đã được tạo chưa
     let dbTasks = await queryAll("SELECT * FROM tasks");
     expect(dbTasks.length).toBe(1);
-    expect(dbTasks[0].title).toBe('Initial System Task');
+    expect(dbTasks[0].title).toBe('Task hệ thống ban đầu');
     expect(dbTasks[0].status).toBe('todo');
 
     // 3. Tạo một task mới qua API để kích hoạt luồng lưu trữ dữ liệu xuống SQLite
@@ -53,8 +53,8 @@ test.describe('Database Integrity Verification', () => {
     });
     const { token } = await apiLogin.json();
 
-    const taskTitle = 'Database Integrity Check Task';
-    const taskDesc = 'Inserted via API, verified directly by querying SQLite files';
+    const taskTitle = 'Task kiểm tra tính toàn vẹn DB';
+    const taskDesc = 'Được thêm qua API, xác minh trực tiếp bằng truy vấn SQLite';
     
     await request.post('/api/tasks', {
       headers: { 'Authorization': `Bearer ${token}` },

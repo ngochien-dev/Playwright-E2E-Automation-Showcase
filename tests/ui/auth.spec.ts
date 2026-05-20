@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/LoginPage';
 import { DashboardPage } from '../pages/DashboardPage';
 
-test.describe('Authentication Tests', () => {
+test.describe('Kiểm Thử Đăng Nhập & Xác Thực (Auth Tests)', () => {
   let loginPage: LoginPage;
   let dashboardPage: DashboardPage;
 
@@ -12,26 +12,26 @@ test.describe('Authentication Tests', () => {
     await loginPage.navigate();
   });
 
-  test('should display login page layout correctly', async ({ page }) => {
-    // Xác minh tiêu đề trang và hiển thị của các input biểu mẫu
-    await expect(page).toHaveTitle(/Sleek Task Manager/);
+  test('nên hiển thị chính xác giao diện trang đăng nhập', async ({ page }) => {
+    // Xác minh tiêu đề trang và hiển thị của các ô nhập liệu
+    await expect(page).toHaveTitle(/Trình Quản Lý Công Việc/);
     await expect(loginPage.usernameInput).toBeVisible();
     await expect(loginPage.passwordInput).toBeVisible();
     await expect(loginPage.loginSubmitBtn).toBeVisible();
     await expect(loginPage.errorAlert).toBeHidden();
   });
 
-  test('should show error message with invalid credentials', async () => {
+  test('nên hiển thị thông báo lỗi khi đăng nhập sai tài khoản hoặc mật khẩu', async () => {
     await loginPage.login('wronguser', 'wrongpassword');
     
     // Xác minh thông báo lỗi hiển thị thành công bằng cơ chế tự động đợi của Playwright
     await expect(loginPage.errorAlert).toBeVisible();
     
     const errorText = await loginPage.getErrorMessage();
-    expect(errorText).toBe('Invalid username or password.');
+    expect(errorText).toBe('Tên đăng nhập hoặc mật khẩu không chính xác.');
   });
 
-  test('should login successfully with valid credentials and logout', async () => {
+  test('nên đăng nhập thành công với tài khoản hợp lệ và đăng xuất ra ngoài', async () => {
     // Thực hiện đăng nhập bằng tài khoản admin chính xác
     await loginPage.login('admin', 'password123');
 

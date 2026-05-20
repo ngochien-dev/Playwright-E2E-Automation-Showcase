@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sleek Task Manager - QA Automation Target</title>
+  <title>Trình Quản Lý Công Việc - QA Automation Target</title>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,36 +27,36 @@
           <i class="fa-solid fa-list-check"></i>
           <span>SleekTask</span>
         </div>
-        <h2>Welcome Back</h2>
-        <p>Please enter your credentials to access the task dashboard.</p>
+        <h2>Chào Mừng Quay Lại</h2>
+        <p>Vui lòng nhập tài khoản để truy cập bảng công việc.</p>
       </div>
 
       <form id="login-form">
         <div class="alert error-alert" id="login-error" style="display: none;">
           <i class="fa-solid fa-triangle-exclamation"></i>
-          <span id="login-error-text">Invalid username or password</span>
+          <span id="login-error-text">Tên đăng nhập hoặc mật khẩu không chính xác</span>
         </div>
 
         <div class="form-group">
-          <label for="username">Username</label>
+          <label for="username">Tên đăng nhập</label>
           <div class="input-wrapper">
             <i class="fa-regular fa-user"></i>
-            <input type="text" id="username" placeholder="e.g. admin" required autocomplete="username">
+            <input type="text" id="username" placeholder="Ví dụ: admin" required autocomplete="username">
           </div>
-          <span class="helper-text">Hint: <code>admin</code></span>
+          <span class="helper-text">Gợi ý: <code>admin</code></span>
         </div>
 
         <div class="form-group">
-          <label for="password">Password</label>
+          <label for="password">Mật khẩu</label>
           <div class="input-wrapper">
             <i class="fa-regular fa-lock"></i>
             <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
           </div>
-          <span class="helper-text">Hint: <code>password123</code></span>
+          <span class="helper-text">Gợi ý: <code>password123</code></span>
         </div>
 
         <button type="submit" class="btn btn-primary btn-block" id="login-submit-btn">
-          <span>Sign In</span>
+          <span>Đăng Nhập</span>
           <i class="fa-solid fa-arrow-right-to-bracket"></i>
         </button>
       </form>
@@ -71,7 +71,7 @@
             <i class="fa-solid fa-list-check"></i>
             <span>SleekTask</span>
           </div>
-          <div class="badge">QA Target App</div>
+          <div class="badge">Ứng Dụng Kiểm Thử QA</div>
         </div>
         <div class="header-right">
           <div class="user-profile">
@@ -80,7 +80,7 @@
           </div>
           <button id="logout-btn" class="btn btn-secondary btn-sm">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
-            <span>Logout</span>
+            <span>Đăng xuất</span>
           </button>
         </div>
       </header>
@@ -88,17 +88,17 @@
       <!-- Dashboard Controls -->
       <div class="dashboard-controls">
         <div class="controls-left">
-          <h2>Task Board</h2>
-          <p>Manage and track your QA automation test scenarios.</p>
+          <h2>Bảng Công Việc</h2>
+          <p>Quản lý và theo dõi kịch bản kiểm thử tự động QA.</p>
         </div>
         <div class="controls-right">
           <button id="reset-db-btn" class="btn btn-warning">
             <i class="fa-solid fa-rotate-left"></i>
-            <span>Reset Database</span>
+            <span>Reset Cơ Sở Dữ Liệu</span>
           </button>
           <button id="open-add-task-btn" class="btn btn-primary">
             <i class="fa-solid fa-plus"></i>
-            <span>Create Task</span>
+            <span>Tạo Công Việc</span>
           </button>
         </div>
       </div>
@@ -110,12 +110,12 @@
           <div class="column-header">
             <div class="column-title">
               <span class="dot dot-todo"></span>
-              <h3>To Do</h3>
+              <h3>Cần Làm</h3>
             </div>
             <span class="task-count" id="count-todo">0</span>
           </div>
           <div class="task-list" id="list-todo">
-            <!-- Dynamic task items go here -->
+            <!-- Bản ghi công việc được render động ở đây -->
           </div>
         </div>
 
@@ -124,12 +124,12 @@
           <div class="column-header">
             <div class="column-title">
               <span class="dot dot-progress"></span>
-              <h3>In Progress</h3>
+              <h3>Đang Làm</h3>
             </div>
             <span class="task-count" id="count-in-progress">0</span>
           </div>
           <div class="task-list" id="list-in-progress">
-            <!-- Dynamic task items go here -->
+            <!-- Bản ghi công việc được render động ở đây -->
           </div>
         </div>
 
@@ -138,12 +138,12 @@
           <div class="column-header">
             <div class="column-title">
               <span class="dot dot-completed"></span>
-              <h3>Completed</h3>
+              <h3>Đã Xong</h3>
             </div>
             <span class="task-count" id="count-completed">0</span>
           </div>
           <div class="task-list" id="list-completed">
-            <!-- Dynamic task items go here -->
+            <!-- Bản ghi công việc được render động ở đây -->
           </div>
         </div>
       </div>
@@ -154,30 +154,30 @@
   <div id="task-modal" class="modal-backdrop" style="display: none;">
     <div class="glass-card modal-card">
       <div class="modal-header">
-        <h3 id="modal-title">Create New Task</h3>
+        <h3 id="modal-title">Tạo Công Việc Mới</h3>
         <button id="close-modal-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <form id="task-form">
         <input type="hidden" id="task-id">
         <div class="form-group">
-          <label for="task-title">Task Title</label>
-          <input type="text" id="task-title" placeholder="e.g. Automated UI test for dashboard" required>
+          <label for="task-title">Tiêu Đề Công Việc</label>
+          <input type="text" id="task-title" placeholder="Ví dụ: Viết kịch bản kiểm thử giao diện Dashboard" required>
         </div>
         <div class="form-group">
-          <label for="task-desc">Description</label>
-          <textarea id="task-desc" placeholder="Write detail checklist or steps to reproduce..." rows="4"></textarea>
+          <label for="task-desc">Mô Tả Chi Tiết</label>
+          <textarea id="task-desc" placeholder="Nhập mô tả chi tiết công việc hoặc các bước tái tạo lỗi..." rows="4"></textarea>
         </div>
         <div class="form-group" id="status-group" style="display: none;">
-          <label for="task-status">Status</label>
+          <label for="task-status">Trạng Thái</label>
           <select id="task-status">
-            <option value="todo">To Do</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
+            <option value="todo">Cần Làm</option>
+            <option value="in_progress">Đang Làm</option>
+            <option value="completed">Đã Xong</option>
           </select>
         </div>
         <div class="modal-footer">
-          <button type="button" id="cancel-task-btn" class="btn btn-secondary">Cancel</button>
-          <button type="submit" id="save-task-btn" class="btn btn-primary">Save Task</button>
+          <button type="button" id="cancel-task-btn" class="btn btn-secondary">Hủy</button>
+          <button type="submit" id="save-task-btn" class="btn btn-primary">Lưu Công Việc</button>
         </div>
       </form>
     </div>
