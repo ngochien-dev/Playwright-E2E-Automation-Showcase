@@ -129,4 +129,19 @@ export class DashboardPage extends BasePage {
     const text = await this.userDisplayName.textContent();
     return text ? text.trim() : '';
   }
+
+  async dragAndDropTask(title: string, targetColumn: 'todo' | 'in_progress' | 'completed') {
+    const card = this.getTaskCard(title);
+    let targetList: Locator;
+    if (targetColumn === 'todo') {
+      targetList = this.listTodo;
+    } else if (targetColumn === 'in_progress') {
+      targetList = this.listInProgress;
+    } else {
+      targetList = this.listCompleted;
+    }
+    await card.dragTo(targetList);
+    // Đợi API cập nhật trạng thái task trả về thành công
+    await this.page.waitForResponse(response => response.url().includes('/api/tasks/') && response.status() === 200);
+  }
 }

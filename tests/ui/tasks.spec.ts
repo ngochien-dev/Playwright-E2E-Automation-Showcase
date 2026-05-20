@@ -98,4 +98,18 @@ test.describe('Kiểm thử Quản Lý Công Việc (CRUD)', () => {
     // Xác minh bộ đếm của cột giảm về 0
     await expect(dashboardPage.countTodo).toHaveText('0');
   });
+
+  test('nên di chuyển công việc kéo và thả (Drag and Drop)', async () => {
+    const taskTitle = 'Task hệ thống ban đầu';
+
+    // Thực hiện kéo thả task từ cột Cần Làm sang cột Đang Làm
+    await dashboardPage.dragAndDropTask(taskTitle, 'in_progress');
+    await expect(dashboardPage.countTodo).toHaveText('0');
+    await expect(dashboardPage.countInProgress).toHaveText('1');
+
+    // Thực hiện kéo thả task từ cột Đang Làm sang cột Đã Xong
+    await dashboardPage.dragAndDropTask(taskTitle, 'completed');
+    await expect(dashboardPage.countInProgress).toHaveText('0');
+    await expect(dashboardPage.countCompleted).toHaveText('1');
+  });
 });

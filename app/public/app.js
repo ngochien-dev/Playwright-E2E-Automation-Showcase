@@ -253,6 +253,17 @@ document.addEventListener('DOMContentLoaded', () => {
     card.className = `task-item task-item-${task.status}`;
     card.setAttribute('data-id', task.id);
     card.setAttribute('id', `task-card-${task.id}`);
+    card.setAttribute('draggable', 'true');
+
+    // Thêm các sự kiện kéo card
+    card.addEventListener('dragstart', (e) => {
+      card.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', task.id);
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+    });
 
     card.innerHTML = `
       <div class="task-item-header">
@@ -347,6 +358,38 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Lỗi khi xóa: ' + err.message);
     }
   }
+
+  // --- Cấu hình các sự kiện Drag & Drop cho các cột công việc ---
+  const boardColumnsSetup = [
+    { list: listTodo, status: 'todo' },
+    { list: listInProgress, status: 'in_progress' },
+    { list: listCompleted, status: 'completed' }
+  ];
+
+  boardColumnsSetup.forEach(setup => {
+    setup.list.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      setup.list.classList.add('drag-over');
+    });
+
+    setup.list.addEventListener('dragleave', () => {
+      setup.list.classList.remove('drag-over');
+    });
+
+    setup.list.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      setup.list.classList.remove('drag-over');
+      
+      const id = e.dataTransfer.getData('text/plain');
+      if (id) {
+        // Tìm thông tin task để tránh gửi API nếu thả vào đúng cột cũ
+        const task = tasks.find(t => t.id === parseInt(id));
+        if (task && task.status !== setup.status) {
+          await updateTaskStatus(task.id, setup.status);
+        }
+      }
+    });
+  });
 
   // Hàm tiện ích để chuẩn hóa chuỗi HTML tránh các cuộc tấn công XSS
   function escapeHtml(string) {
