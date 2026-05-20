@@ -22,13 +22,15 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
 });
 
 // Khởi tạo các bảng dữ liệu ban đầu và chèn tài khoản admin mặc định
+// Khởi tạo các bảng dữ liệu ban đầu và chèn các tài khoản phân quyền mặc định
 function initializeDatabase() {
   db.serialize(() => {
     db.run(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
-        password TEXT
+        password TEXT,
+        role TEXT DEFAULT 'admin'
       )
     `);
 
@@ -42,12 +44,21 @@ function initializeDatabase() {
       )
     `);
 
-    // Chèn user admin mặc định dùng để đăng nhập kiểm thử nếu chưa tồn tại
+    // Chèn user admin mặc định nếu chưa tồn tại
     db.run(
-      `INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)`,
-      ['admin', 'password123'],
+      `INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)`,
+      ['admin', 'password123', 'admin'],
       (err) => {
         if (err) console.error('Lỗi khi chèn tài khoản mock admin:', err.message);
+      }
+    );
+
+    // Chèn user viewer mặc định nếu chưa tồn tại
+    db.run(
+      `INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)`,
+      ['viewer', 'password123', 'viewer'],
+      (err) => {
+        if (err) console.error('Lỗi khi chèn tài khoản mock viewer:', err.message);
       }
     );
   });
@@ -56,10 +67,27 @@ function initializeDatabase() {
 // Middleware dùng để xác thực token gửi lên trong Header
 function authenticate(req, res, next) {
   const authHeader = req.headers['authorization'];
-  if (!authHeader || authHeader !== 'Bearer mock-jwt-token-12345') {
-    return res.status(401).json({ error: 'Không có quyền truy cập. Token không hợp lệ hoặc bị thiếu.' });
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Không có quyền truy cập. Token bị thiếu.' });
   }
-  next();
+  if (authHeader === 'Bearer mock-jwt-token-admin') {
+    req.user = { role: 'admin' };
+    next();
+  } else if (authHeader === 'Bearer mock-jwt-token-viewer') {
+    req.user = { role: 'viewer' };
+    next();
+  } else {
+    return res.status(401).json({ error: 'Không có quyền truy cập. Token không hợp lệ.' });
+  }
+}
+
+// Middleware dùng để phân quyền tài khoản admin (chỉ admin mới có quyền ghi/chỉnh sửa)
+function authorizeAdmin(req, res, next) {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    return res.status(403).json({ error: 'Quyền truy cập bị từ chối. Chỉ tài khoản Quản trị viên mới được phép thực hiện hành động này.' });
+  }
 }
 
 // --- CÁC ENDPOINT API ---
@@ -81,8 +109,9 @@ app.post('/api/auth/login', (req, res) => {
       if (!user) {
         return res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không chính xác.' });
       }
-      // Trả về token mock đơn giản để xác thực ở các API sau
-      res.json({ token: 'mock-jwt-token-12345', username: user.username });
+      // Trả về token tương ứng với phân quyền của user
+      const token = user.role === 'admin' ? 'mock-jwt-token-admin' : 'mock-jwt-token-viewer';
+      res.json({ token, username: user.username, role: user.role });
     }
   );
 });
@@ -98,7 +127,7 @@ app.get('/api/tasks', authenticate, (req, res) => {
 });
 
 // API Tạo mới một Task
-app.post('/api/tasks', authenticate, (req, res) => {
+app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
   const { title, description } = req.body;
   if (!title) {
     return res.status(400).json({ error: 'Tiêu đề công việc là bắt buộc.' });
@@ -122,7 +151,7 @@ app.post('/api/tasks', authenticate, (req, res) => {
 });
 
 // API Cập nhật nội dung hoặc trạng thái của một Task
-app.put('/api/tasks/:id', authenticate, (req, res) => {
+app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
   const { id } = req.params;
   const { title, description, status } = req.body;
 
@@ -157,7 +186,7 @@ app.put('/api/tasks/:id', authenticate, (req, res) => {
 });
 
 // API Xóa một Task theo ID
-app.delete('/api/tasks/:id', authenticate, (req, res) => {
+app.delete('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
   const { id } = req.params;
 
   db.run('DELETE FROM tasks WHERE id = ?', [id], function (err) {

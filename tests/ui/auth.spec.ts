@@ -38,7 +38,7 @@ test.describe('Kiểm Thử Đăng Nhập & Xác Thực (Auth Tests)', () => {
     // Xác minh giao diện dashboard hiển thị tên người dùng chính xác
     await expect(dashboardPage.userDisplayName).toBeVisible();
     const displayName = await dashboardPage.getUsername();
-    expect(displayName).toBe('admin');
+    expect(displayName).toContain('admin');
 
     // Xác minh form đăng nhập đã bị ẩn đi
     await expect(loginPage.usernameInput).toBeHidden();

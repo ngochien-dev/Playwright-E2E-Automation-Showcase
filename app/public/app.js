@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Khởi tạo State ---
   let token = localStorage.getItem('token') || '';
   let username = localStorage.getItem('username') || '';
+  let role = localStorage.getItem('role') || '';
   let tasks = [];
 
   // --- Tìm các thành phần DOM ---
@@ -54,7 +55,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function showDashboard() {
     authView.style.display = 'none';
     dashboardView.style.display = 'block';
-    userDisplayName.textContent = username;
+    userDisplayName.textContent = `${username} (${role === 'admin' ? 'Quản trị viên' : 'Người xem'})`;
+    
+    // Ẩn/hiện các chức năng tạo/reset dựa trên vai trò
+    if (role === 'viewer') {
+      openAddTaskBtn.style.display = 'none';
+      resetDbBtn.style.display = 'none';
+    } else {
+      openAddTaskBtn.style.display = 'block';
+      resetDbBtn.style.display = 'block';
+    }
+    
     fetchTasks();
   }
 
@@ -85,8 +96,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       token = data.token;
       username = data.username;
+      role = data.role;
       localStorage.setItem('token', token);
       localStorage.setItem('username', username);
+      localStorage.setItem('role', role);
 
       // Xóa sạch các ô nhập liệu sau khi đăng nhập
       usernameInput.value = '';
@@ -103,9 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
   logoutBtn.addEventListener('click', () => {
     token = '';
     username = '';
+    role = '';
     tasks = [];
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+    localStorage.removeItem('role');
     showAuth();
   });
 
@@ -253,40 +268,46 @@ document.addEventListener('DOMContentLoaded', () => {
     card.className = `task-item task-item-${task.status}`;
     card.setAttribute('data-id', task.id);
     card.setAttribute('id', `task-card-${task.id}`);
-    card.setAttribute('draggable', 'true');
 
-    // Thêm các sự kiện kéo card
-    card.addEventListener('dragstart', (e) => {
-      card.classList.add('dragging');
-      e.dataTransfer.setData('text/plain', task.id);
-    });
+    if (role !== 'viewer') {
+      card.setAttribute('draggable', 'true');
 
-    card.addEventListener('dragend', () => {
-      card.classList.remove('dragging');
-    });
+      // Thêm các sự kiện kéo card
+      card.addEventListener('dragstart', (e) => {
+        card.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', task.id);
+      });
+
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+      });
+    }
 
     card.innerHTML = `
       <div class="task-item-header">
         <span class="task-item-title">${escapeHtml(task.title)}</span>
       </div>
       ${task.description ? `<p class="task-item-desc">${escapeHtml(task.description)}</p>` : ''}
-      <div class="task-item-actions">
-        ${task.status !== 'completed' ? `
-          <button class="action-icon move-task" title="Chuyển trạng thái" data-id="${task.id}" data-status="${task.status}">
-            <i class="fa-solid fa-circle-arrow-right"></i>
+      ${role !== 'viewer' ? `
+        <div class="task-item-actions">
+          ${task.status !== 'completed' ? `
+            <button class="action-icon move-task" title="Chuyển trạng thái" data-id="${task.id}" data-status="${task.status}">
+              <i class="fa-solid fa-circle-arrow-right"></i>
+            </button>
+          ` : ''}
+          <button class="action-icon edit-task" title="Chỉnh sửa" data-id="${task.id}">
+            <i class="fa-solid fa-pen-to-square"></i>
           </button>
-        ` : ''}
-        <button class="action-icon edit-task" title="Chỉnh sửa" data-id="${task.id}">
-          <i class="fa-solid fa-pen-to-square"></i>
-        </button>
-        <button class="action-icon delete-task" title="Xóa bỏ" data-id="${task.id}">
-          <i class="fa-solid fa-trash-can"></i>
-        </button>
-      </div>
+          <button class="action-icon delete-task" title="Xóa bỏ" data-id="${task.id}">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      ` : ''}
     `;
 
     // Click vào vùng thân thẻ task để mở modal chỉnh sửa (bỏ qua nếu click trúng nút icon hành động)
     card.addEventListener('click', (e) => {
+      if (role === 'viewer') return; // Viewer không được mở modal sửa
       if (e.target.closest('.action-icon')) return;
       openEditModal(task);
     });
@@ -302,17 +323,23 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    card.querySelector('.edit-task').addEventListener('click', (e) => {
-      e.stopPropagation();
-      openEditModal(task);
-    });
+    const editBtn = card.querySelector('.edit-task');
+    if (editBtn) {
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEditModal(task);
+      });
+    }
 
-    card.querySelector('.delete-task').addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (confirm('Bạn có chắc chắn muốn xóa công việc này không?')) {
-        await deleteTask(task.id);
-      }
-    });
+    const deleteBtn = card.querySelector('.delete-task');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (confirm('Bạn có chắc chắn muốn xóa công việc này không?')) {
+          await deleteTask(task.id);
+        }
+      });
+    }
 
     return card;
   }

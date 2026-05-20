@@ -16,7 +16,7 @@ test.describe('Kiểm Thử REST API Backend', () => {
     expect(loginResponse.status()).toBe(200);
     const body = await loginResponse.json();
     authToken = body.token;
-    expect(authToken).toBe('mock-jwt-token-12345');
+    expect(authToken).toBe('mock-jwt-token-admin');
   });
 
   // Reset database trước mỗi test case API để đảm bảo môi trường sạch
@@ -103,5 +103,41 @@ test.describe('Kiểm Thử REST API Backend', () => {
     const tasks = await getResponse.json();
     const found = tasks.some((t: any) => t.id === task.id);
     expect(found).toBe(false);
+  });
+
+  test('RBAC - nên từ chối yêu cầu tạo mới/sửa/xóa công việc từ tài khoản Người xem (viewer) với mã lỗi 403', async ({ request }) => {
+    // 1. Đăng nhập tài khoản viewer để lấy token
+    const viewerLogin = await request.post('/api/auth/login', {
+      data: {
+        username: 'viewer',
+        password: 'password123'
+      }
+    });
+    expect(viewerLogin.status()).toBe(200);
+    const viewerBody = await viewerLogin.json();
+    const viewerToken = viewerBody.token;
+    expect(viewerToken).toBe('mock-jwt-token-viewer');
+
+    // 2. Thử tạo mới công việc với token viewer -> nhận 403 Forbidden
+    const createResponse = await request.post('/api/tasks', {
+      headers: { 'Authorization': `Bearer ${viewerToken}` },
+      data: { title: 'Task gian lận' }
+    });
+    expect(createResponse.status()).toBe(403);
+    const createBody = await createResponse.json();
+    expect(createBody.error).toContain('Quyền truy cập bị từ chối');
+
+    // 3. Thử cập nhật công việc của admin -> nhận 403 Forbidden
+    const updateResponse = await request.put('/api/tasks/1', {
+      headers: { 'Authorization': `Bearer ${viewerToken}` },
+      data: { status: 'completed' }
+    });
+    expect(updateResponse.status()).toBe(403);
+
+    // 4. Thử xóa công việc của admin -> nhận 403 Forbidden
+    const deleteResponse = await request.delete('/api/tasks/1', {
+      headers: { 'Authorization': `Bearer ${viewerToken}` }
+    });
+    expect(deleteResponse.status()).toBe(403);
   });
 });
