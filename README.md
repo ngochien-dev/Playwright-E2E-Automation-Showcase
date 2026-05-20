@@ -1,6 +1,11 @@
 # Web Automation Testing Showcase Project 🚀
 
+[![Playwright Tests CI](https://github.com/ngochien-dev/Playwright-E2E-Automation-Showcase/actions/workflows/playwright.yml/badge.svg)](https://github.com/ngochien-dev/Playwright-E2E-Automation-Showcase/actions/workflows/playwright.yml)
+[![Live Test Report](https://img.shields.io/badge/Live_Report-GitHub_Pages-brightgreen?logo=github)](https://ngochien-dev.github.io/Playwright-E2E-Automation-Showcase/)
+
 This is a comprehensive, production-ready Web Automation Testing Showcase Project designed to demonstrate modern QA automation engineering competencies. It features a **fully functional target web application** (SleekTask Manager) and a robust **Playwright automation suite** that tests across multiple system boundaries: UI, API, Network, and the Database layer.
+
+> **Live Test Report:** You can view the live automated test execution results directly online at [https://ngochien-dev.github.io/Playwright-E2E-Automation-Showcase/](https://ngochien-dev.github.io/Playwright-E2E-Automation-Showcase/) (automatically generated and deployed via GitHub Actions CI/CD on every commit).
 
 The target application has been localized to Vietnamese (representing localized market application testing), while the automated test suite contains English specs, full Page Object Model (POM) abstractions, visual regression checks, API mocking, and data-driven validations.
 
