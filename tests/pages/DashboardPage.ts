@@ -109,6 +109,9 @@ export class DashboardPage extends BasePage {
     await this.openCreateTaskModal();
     await this.fillTaskForm(title, description, undefined, priority);
     await this.saveTask();
+    // Đợi thẻ công việc mới hiển thị để chắc chắn đã render xong
+    await this.getTaskCard(title).waitFor({ state: 'visible' });
+    await this.page.waitForTimeout(300);
   }
 
   // Các hàm phụ trợ (helper) xử lý thẻ Task
@@ -122,6 +125,9 @@ export class DashboardPage extends BasePage {
     await this.taskModal.waitFor({ state: 'visible' });
     await this.fillTaskForm(newTitle, newDescription, newStatus, newPriority);
     await this.saveTask();
+    // Đợi thẻ công việc mới hiển thị để chắc chắn đã render xong
+    await this.getTaskCard(newTitle).waitFor({ state: 'visible' });
+    await this.page.waitForTimeout(300);
   }
 
   async searchTask(keyword: string) {
@@ -138,14 +144,16 @@ export class DashboardPage extends BasePage {
     await moveBtn.click();
     // Đợi API cập nhật trạng thái task trả về thành công
     await this.page.waitForResponse(response => response.url().includes('/api/tasks/') && response.status() === 200);
+    await this.page.waitForTimeout(300);
   }
 
   async deleteTask(title: string) {
     const card = this.getTaskCard(title);
     const deleteBtn = card.locator('.delete-task');
     await deleteBtn.click();
-    // Đợi API xóa task trả về thành công
-    await this.page.waitForResponse(response => response.url().includes('/api/tasks/') && response.status() === 200);
+    // Đợi thẻ công việc biến mất khỏi DOM
+    await card.waitFor({ state: 'hidden' });
+    await this.page.waitForTimeout(300);
   }
 
   async getColumnTaskCount(column: 'todo' | 'in_progress' | 'completed'): Promise<number> {
@@ -178,11 +186,13 @@ export class DashboardPage extends BasePage {
     await card.dragTo(targetList);
     // Đợi API cập nhật trạng thái task trả về thành công
     await this.page.waitForResponse(response => response.url().includes('/api/tasks/') && response.status() === 200);
+    await this.page.waitForTimeout(300);
   }
 
   async openActivityLogs() {
     await this.openActivityBtn.click();
     await this.activityDrawer.waitFor({ state: 'visible' });
+    await this.page.waitForTimeout(300);
   }
 
   async closeActivityLogs() {

@@ -27,10 +27,17 @@
           <i class="fa-solid fa-list-check"></i>
           <span>SleekTask</span>
         </div>
-        <h2>Chào Mừng Quay Lại</h2>
-        <p>Vui lòng nhập tài khoản để truy cập bảng công việc.</p>
+        <h2 id="auth-title">Chào Mừng Quay Lại</h2>
+        <p id="auth-subtitle">Vui lòng nhập tài khoản để truy cập bảng công việc.</p>
       </div>
 
+      <!-- Toggle giữa Đăng nhập và Đăng ký -->
+      <div class="auth-tabs">
+        <button id="tab-login" class="tab-btn active">Đăng Nhập</button>
+        <button id="tab-register" class="tab-btn">Đăng Ký</button>
+      </div>
+
+      <!-- Form Đăng Nhập -->
       <form id="login-form">
         <div class="alert error-alert" id="login-error" style="display: none;">
           <i class="fa-solid fa-triangle-exclamation"></i>
@@ -58,6 +65,50 @@
         <button type="submit" class="btn btn-primary btn-block" id="login-submit-btn">
           <span>Đăng Nhập</span>
           <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        </button>
+      </form>
+
+      <!-- Form Đăng Ký -->
+      <form id="register-form" style="display: none;">
+        <div class="alert error-alert" id="register-error" style="display: none;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span id="register-error-text">Lỗi đăng ký</span>
+        </div>
+        <div class="alert success-alert" id="register-success" style="display: none;">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>Đăng ký thành công! Đang chuyển sang Đăng nhập...</span>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-username">Tên đăng nhập mới</label>
+          <div class="input-wrapper">
+            <i class="fa-regular fa-user"></i>
+            <input type="text" id="reg-username" placeholder="Ví dụ: testuser" required autocomplete="username">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-password">Mật khẩu mới</label>
+          <div class="input-wrapper">
+            <i class="fa-regular fa-lock"></i>
+            <input type="password" id="reg-password" placeholder="Tối thiểu 4 ký tự..." required autocomplete="new-password">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-role">Vai trò của tài khoản</label>
+          <div class="input-wrapper">
+            <i class="fa-regular fa-id-card"></i>
+            <select id="reg-role">
+              <option value="admin">Quản trị viên (Admin - toàn quyền)</option>
+              <option value="viewer">Người xem (Viewer - chỉ xem)</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="register-submit-btn">
+          <span>Đăng Ký Tài Khoản</span>
+          <i class="fa-solid fa-user-plus"></i>
         </button>
       </form>
     </div>

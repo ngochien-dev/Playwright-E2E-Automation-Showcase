@@ -113,6 +113,45 @@ function authorizeAdmin(req, res, next) {
 
 // --- CÁC ENDPOINT API ---
 
+// API Đăng ký tài khoản mới
+app.post('/api/auth/register', (req, res) => {
+  const { username, password, role } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Tên đăng nhập và mật khẩu không được bỏ trống.' });
+  }
+  const cleanUsername = username.trim();
+  const cleanPassword = password.trim();
+  const userRole = role === 'viewer' ? 'viewer' : 'admin';
+
+  if (cleanUsername.length < 3) {
+    return res.status(400).json({ error: 'Tên đăng nhập phải chứa ít nhất 3 ký tự.' });
+  }
+  if (cleanPassword.length < 4) {
+    return res.status(400).json({ error: 'Mật khẩu phải chứa ít nhất 4 ký tự.' });
+  }
+
+  // Kiểm tra xem tên đăng nhập đã tồn tại chưa
+  db.get('SELECT * FROM users WHERE username = ?', [cleanUsername], (err, user) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (user) {
+      return res.status(400).json({ error: 'Tên đăng nhập đã tồn tại.' });
+    }
+
+    db.run(
+      'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+      [cleanUsername, cleanPassword, userRole],
+      function (err) {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+        res.status(201).json({ message: 'Đăng ký tài khoản thành công.', username: cleanUsername, role: userRole });
+      }
+    );
+  });
+});
+
 // API Đăng nhập
 app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body;

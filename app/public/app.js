@@ -13,6 +13,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordInput = document.getElementById('password');
   const loginError = document.getElementById('login-error');
   const loginErrorText = document.getElementById('login-error-text');
+
+  // Đăng ký tài khoản
+  const tabLogin = document.getElementById('tab-login');
+  const tabRegister = document.getElementById('tab-register');
+  const registerForm = document.getElementById('register-form');
+  const regUsernameInput = document.getElementById('reg-username');
+  const regPasswordInput = document.getElementById('reg-password');
+  const regRoleSelect = document.getElementById('reg-role');
+  const registerError = document.getElementById('register-error');
+  const registerErrorText = document.getElementById('register-error-text');
+  const registerSuccess = document.getElementById('register-success');
+  const authTitle = document.getElementById('auth-title');
+  const authSubtitle = document.getElementById('auth-subtitle');
   const userDisplayName = document.getElementById('user-display-name');
   const logoutBtn = document.getElementById('logout-btn');
   const resetDbBtn = document.getElementById('reset-db-btn');
@@ -61,6 +74,16 @@ document.addEventListener('DOMContentLoaded', () => {
     authView.style.display = 'block';
     dashboardView.style.display = 'none';
     loginError.style.display = 'none';
+    if (registerError) registerError.style.display = 'none';
+    if (registerSuccess) registerSuccess.style.display = 'none';
+    if (tabLogin) {
+      tabLogin.classList.add('active');
+      if (tabRegister) tabRegister.classList.remove('active');
+      if (loginForm) loginForm.style.display = 'block';
+      if (registerForm) registerForm.style.display = 'none';
+      if (authTitle) authTitle.textContent = 'Chào Mừng Quay Lại';
+      if (authSubtitle) authSubtitle.textContent = 'Vui lòng nhập tài khoản để truy cập bảng công việc.';
+    }
   }
 
   function showDashboard() {
@@ -81,6 +104,75 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Lắng nghe sự kiện (Event Listeners) ---
+
+  // Chuyển sang Tab Đăng Nhập
+  if (tabLogin) {
+    tabLogin.addEventListener('click', () => {
+      tabLogin.classList.add('active');
+      tabRegister.classList.remove('active');
+      loginForm.style.display = 'block';
+      registerForm.style.display = 'none';
+      authTitle.textContent = 'Chào Mừng Quay Lại';
+      authSubtitle.textContent = 'Vui lòng nhập tài khoản để truy cập bảng công việc.';
+      loginError.style.display = 'none';
+    });
+  }
+
+  // Chuyển sang Tab Đăng Ký
+  if (tabRegister) {
+    tabRegister.addEventListener('click', () => {
+      tabRegister.classList.add('active');
+      tabLogin.classList.remove('active');
+      registerForm.style.display = 'block';
+      loginForm.style.display = 'none';
+      authTitle.textContent = 'Tạo Tài Khoản Mới';
+      authSubtitle.textContent = 'Đăng ký tài khoản để bắt đầu quản lý công việc.';
+      registerError.style.display = 'none';
+      registerSuccess.style.display = 'none';
+    });
+  }
+
+  // Xử lý nộp form Đăng Ký
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      registerError.style.display = 'none';
+      registerSuccess.style.display = 'none';
+
+      const registerData = {
+        username: regUsernameInput.value.trim(),
+        password: regPasswordInput.value,
+        role: regRoleSelect.value
+      };
+
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(registerData)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Đăng ký tài khoản thất bại');
+        }
+
+        registerSuccess.style.display = 'flex';
+        registerForm.reset();
+
+        // Tự động chuyển sang Tab Đăng Nhập sau 1.5 giây và điền sẵn username
+        setTimeout(() => {
+          tabLogin.click();
+          usernameInput.value = data.username;
+          passwordInput.focus();
+        }, 1500);
+      } catch (err) {
+        registerErrorText.textContent = err.message;
+        registerError.style.display = 'flex';
+      }
+    });
+  }
 
   // Xử lý nộp form Đăng nhập
   loginForm.addEventListener('submit', async (e) => {
