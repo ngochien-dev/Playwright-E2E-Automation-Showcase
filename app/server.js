@@ -375,7 +375,7 @@ app.post('/api/tasks/:id/upload', authenticate, authorizeAdmin, upload.single('a
 
 // API Lấy danh sách Lịch sử hoạt động
 app.get('/api/activities', authenticate, (req, res) => {
-  db.all('SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 50', [], (err, rows) => {
+  db.all('SELECT * FROM activity_logs ORDER BY created_at DESC, id DESC LIMIT 50', [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }

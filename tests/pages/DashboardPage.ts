@@ -66,7 +66,7 @@ export class DashboardPage extends BasePage {
     this.taskModal = page.locator('#task-modal');
     this.modalTitle = page.locator('#modal-title');
     this.taskTitleInput = page.locator('#task-title');
-    this.taskDescInput = page.locator('#task-desc');
+    this.taskDescInput = page.locator('#task-desc-editor .ql-editor');
     this.taskStatusSelect = page.locator('#task-status');
     this.saveTaskBtn = page.locator('#save-task-btn');
     this.cancelTaskBtn = page.locator('#cancel-task-btn');

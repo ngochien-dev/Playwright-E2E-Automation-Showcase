@@ -640,7 +640,8 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const response = await fetch('/api/tasks', {
         method: 'GET',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
       });
 
       if (response.status === 401) {
@@ -663,7 +664,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!token) return;
     try {
       const response = await fetch('/api/users', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
       });
       if (!response.ok) throw new Error('Không thể tải danh sách users');
       const users = await response.json();
@@ -801,7 +803,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="task-item-header">
         <span class="task-item-title">${escapeHtml(task.title)}</span>
       </div>
-      ${task.description ? `<p class="task-item-desc">${escapeHtml(task.description)}</p>` : ''}
+      ${task.description ? `<p class="task-item-desc">${escapeHtml(stripHtml(task.description))}</p>` : ''}
       ${subtasksIndicator}
       <div class="card-meta">
         <div class="priority-badge priority-${task.priority || 'medium'}">${priorityText}</div>
@@ -967,7 +969,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!token) return;
     try {
       const response = await fetch('/api/activities', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
       });
       if (!response.ok) throw new Error('Không thể tải lịch sử hoạt động');
       const activities = await response.json();
@@ -1061,15 +1064,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Hàm tiện ích để chuẩn hóa chuỗi HTML tránh các cuộc tấn công XSS
-  function escapeHtml(string) {
-    const map = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
-    };
-    return String(string).replace(/[&<>"']/g, function(m) { return map[m]; });
+  // Hàm tiện ích Escape HTML để chống XSS
+  function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+         .toString()
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+  }
+
+  // Hàm tiện ích loại bỏ thẻ HTML (lấy plain text từ Quill editor)
+  function stripHtml(html) {
+    if (!html) return '';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
   }
 });
