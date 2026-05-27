@@ -63,6 +63,7 @@ function initializeDatabase() {
         due_date TEXT,
         tags TEXT DEFAULT '[]',
         assignee TEXT,
+        comments TEXT DEFAULT '[]',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -74,6 +75,7 @@ function initializeDatabase() {
     db.run(`ALTER TABLE tasks ADD COLUMN due_date TEXT`, (err) => { /* ignore if column exists */ });
     db.run(`ALTER TABLE tasks ADD COLUMN tags TEXT DEFAULT '[]'`, (err) => { /* ignore if column exists */ });
     db.run(`ALTER TABLE tasks ADD COLUMN assignee TEXT`, (err) => { /* ignore if column exists */ });
+    db.run(`ALTER TABLE tasks ADD COLUMN comments TEXT DEFAULT '[]'`, (err) => { /* ignore if column exists */ });
 
     db.run(`
       CREATE TABLE IF NOT EXISTS activity_logs (
@@ -215,7 +217,8 @@ app.get('/api/tasks', authenticate, (req, res) => {
     const formattedRows = rows.map(row => ({
       ...row,
       subtasks: row.subtasks ? JSON.parse(row.subtasks) : [],
-      tags: row.tags ? JSON.parse(row.tags) : []
+      tags: row.tags ? JSON.parse(row.tags) : [],
+      comments: row.comments ? JSON.parse(row.comments) : []
     }));
     res.json(formattedRows);
   });
@@ -233,17 +236,18 @@ app.get('/api/users', authenticate, (req, res) => {
 
 // API Tạo mới một Task
 app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
-  const { title, description, priority, subtasks, due_date, tags, assignee } = req.body;
+  const { title, description, priority, subtasks, due_date, tags, assignee, comments } = req.body;
   if (!title) {
     return res.status(400).json({ error: 'Tiêu đề công việc là bắt buộc.' });
   }
   const taskPriority = priority || 'medium';
   const taskSubtasks = subtasks ? JSON.stringify(subtasks) : '[]';
   const taskTags = tags ? JSON.stringify(tags) : '[]';
+  const taskComments = comments ? JSON.stringify(comments) : '[]';
 
   db.run(
-    'INSERT INTO tasks (title, description, status, priority, subtasks, due_date, tags, assignee) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [title, description || '', 'todo', taskPriority, taskSubtasks, due_date || null, taskTags, assignee || null],
+    'INSERT INTO tasks (title, description, status, priority, subtasks, due_date, tags, assignee, comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [title, description || '', 'todo', taskPriority, taskSubtasks, due_date || null, taskTags, assignee || null, taskComments],
     function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -259,7 +263,8 @@ app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
           subtasks: JSON.parse(taskSubtasks),
           due_date: due_date || null,
           tags: JSON.parse(taskTags),
-          assignee: assignee || null
+          assignee: assignee || null,
+          comments: JSON.parse(taskComments)
         });
       });
     }
@@ -269,7 +274,7 @@ app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
 // API Cập nhật nội dung hoặc trạng thái của một Task
 app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
   const { id } = req.params;
-  const { title, description, status, priority, subtasks, due_date, tags, assignee } = req.body;
+  const { title, description, status, priority, subtasks, due_date, tags, assignee, comments } = req.body;
 
   db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
     if (err) {
@@ -287,10 +292,11 @@ app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
     const updatedDueDate = due_date !== undefined ? due_date : task.due_date;
     const updatedTags = tags !== undefined ? JSON.stringify(tags) : (task.tags || '[]');
     const updatedAssignee = assignee !== undefined ? assignee : task.assignee;
+    const updatedComments = comments !== undefined ? JSON.stringify(comments) : (task.comments || '[]');
 
     db.run(
-      'UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, subtasks = ?, due_date = ?, tags = ?, assignee = ? WHERE id = ?',
-      [updatedTitle, updatedDesc, updatedStatus, updatedPriority, updatedSubtasks, updatedDueDate, updatedTags, updatedAssignee, id],
+      'UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, subtasks = ?, due_date = ?, tags = ?, assignee = ?, comments = ? WHERE id = ?',
+      [updatedTitle, updatedDesc, updatedStatus, updatedPriority, updatedSubtasks, updatedDueDate, updatedTags, updatedAssignee, updatedComments, id],
       (err) => {
         if (err) {
           return res.status(500).json({ error: err.message });

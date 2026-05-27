@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const taskForm = document.getElementById('task-form');
   const taskIdInput = document.getElementById('task-id');
   const taskTitleInput = document.getElementById('task-title');
-  const taskDescInput = document.getElementById('task-desc');
   const taskStatusSelect = document.getElementById('task-status');
   const statusGroup = document.getElementById('status-group');
   const cancelTaskBtn = document.getElementById('cancel-task-btn');
@@ -73,6 +72,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const taskDueDateInput = document.getElementById('task-due-date');
   const taskTagsInput = document.getElementById('task-tags');
   const taskAssigneeSelect = document.getElementById('task-assignee');
+  
+  // Nút Export CSV
+  const exportCsvBtn = document.getElementById('export-csv-btn');
+
+  // Khởi tạo Quill Editor
+  let quill = null;
+  if (document.getElementById('task-desc-editor')) {
+    quill = new Quill('#task-desc-editor', {
+      theme: 'snow',
+      modules: {
+        toolbar: [
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          ['clean']
+        ]
+      },
+      placeholder: 'Nhập mô tả chi tiết công việc hoặc các bước tái tạo lỗi...'
+    });
+  }
+
+  // Comments
+  const commentsGroup = document.getElementById('comments-group');
+  const commentsList = document.getElementById('comments-list');
+  const newCommentInput = document.getElementById('new-comment-input');
+  const addCommentBtn = document.getElementById('add-comment-btn');
+  let currentComments = [];
 
   // Ngăn kéo lịch sử hoạt động
   const openActivityBtn = document.getElementById('open-activity-btn');
@@ -368,16 +393,93 @@ document.addEventListener('DOMContentLoaded', () => {
     modalTitle.textContent = 'Tạo Công Việc Mới';
     taskIdInput.value = '';
     taskTitleInput.value = '';
-    taskDescInput.value = '';
+    if (quill) quill.root.innerHTML = '';
     if (taskDueDateInput) taskDueDateInput.value = '';
     if (taskTagsInput) taskTagsInput.value = '';
     if (taskAssigneeSelect) taskAssigneeSelect.value = '';
     statusGroup.style.display = 'none'; // Task mới tạo mặc định luôn có trạng thái "todo"
     if (attachmentGroup) attachmentGroup.style.display = 'none'; // Không cho upload khi tạo mới
+    commentsGroup.style.display = 'none'; // Ẩn comment khi tạo mới
     currentSubtasks = [];
+    currentComments = [];
     renderSubtasks();
     taskModal.style.display = 'flex';
   });
+
+  // Đóng Modal Form
+  function renderComments() {
+    commentsList.innerHTML = '';
+    currentComments.forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'comment-item';
+      
+      const avatarInitial = c.username ? c.username.charAt(0).toUpperCase() : '?';
+      
+      el.innerHTML = `
+        <div class="comment-avatar">${avatarInitial}</div>
+        <div class="comment-content">
+          <div class="comment-header">
+            <span class="comment-author">${c.username}</span>
+            <span class="comment-time">${new Date(c.timestamp).toLocaleString('vi-VN')}</span>
+          </div>
+          <div class="comment-text">${c.text}</div>
+        </div>
+      `;
+      commentsList.appendChild(el);
+    });
+    // Scroll to bottom
+    commentsList.scrollTop = commentsList.scrollHeight;
+  }
+
+  if (addCommentBtn) {
+    addCommentBtn.addEventListener('click', () => {
+      const text = newCommentInput.value.trim();
+      if (!text) return;
+      currentComments.push({
+        username: username,
+        text: text,
+        timestamp: new Date().toISOString()
+      });
+      newCommentInput.value = '';
+      renderComments();
+    });
+  }
+
+  // Export CSV
+  if (exportCsvBtn) {
+    exportCsvBtn.addEventListener('click', () => {
+      if (tasks.length === 0) {
+        alert('Không có dữ liệu để xuất.');
+        return;
+      }
+      
+      const headers = ['ID', 'Tiêu đề', 'Mô tả', 'Trạng thái', 'Độ ưu tiên', 'Người được giao', 'Ngày hết hạn', 'Thẻ'];
+      const rows = tasks.map(t => [
+        t.id,
+        `"${t.title.replace(/"/g, '""')}"`,
+        `"${(t.description || '').replace(/"/g, '""')}"`,
+        t.status,
+        t.priority,
+        t.assignee || '',
+        t.due_date || '',
+        t.tags ? t.tags.join(', ') : ''
+      ]);
+      
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(r => r.join(','))
+      ].join('\n');
+      
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); // \uFEFF for Excel UTF-8 BOM
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `tasks_export_${new Date().getTime()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  }
 
   // Đóng Modal Form
   const closeModal = () => {
@@ -494,12 +596,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskId = taskIdInput.value;
     const taskData = {
       title: taskTitleInput.value.trim(),
-      description: taskDescInput.value.trim(),
+      description: quill ? quill.root.innerHTML : '',
       priority: taskPriorityInput.value,
       subtasks: currentSubtasks.filter(st => st.title.trim() !== ''), // Remove empty subtasks
       due_date: taskDueDateInput ? taskDueDateInput.value : null,
       tags: taskTagsInput ? taskTagsInput.value.split(',').map(t => t.trim()).filter(t => t !== '') : [],
-      assignee: taskAssigneeSelect ? taskAssigneeSelect.value : null
+      assignee: taskAssigneeSelect ? taskAssigneeSelect.value : null,
+      comments: currentComments
     };
 
     let url = '/api/tasks';
@@ -763,15 +866,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function openEditModal(task) {
-    modalTitle.textContent = 'Chỉnh Sửa Công Việc';
+    modalTitle.textContent = 'Cập Nhật Công Việc';
     taskIdInput.value = task.id;
     taskTitleInput.value = task.title;
-    taskDescInput.value = task.description || '';
+    if (quill) quill.root.innerHTML = task.description || '';
     taskStatusSelect.value = task.status;
     taskPriorityInput.value = task.priority || 'medium';
     if (taskDueDateInput) taskDueDateInput.value = task.due_date || '';
-    if (taskTagsInput) taskTagsInput.value = (task.tags && task.tags.length > 0) ? task.tags.join(', ') : '';
+    if (taskTagsInput) taskTagsInput.value = task.tags ? task.tags.join(', ') : '';
     if (taskAssigneeSelect) taskAssigneeSelect.value = task.assignee || '';
+    
+    currentSubtasks = task.subtasks || [];
+    renderSubtasks();
+
+    currentComments = task.comments || [];
+    commentsGroup.style.display = 'block';
+    renderComments();
+
     statusGroup.style.display = 'block'; // Hiển thị ô chọn trạng thái khi chỉnh sửa
     if (attachmentGroup) {
       attachmentGroup.style.display = 'block'; // Hiện khung tải file khi sửa

@@ -590,6 +590,110 @@ input:focus + i {
   margin-top: 2rem;
 }
 
+/* Quill Editor Styles */
+.ql-toolbar {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  background-color: var(--surface-color);
+  border-color: var(--border-color) !important;
+}
+
+.ql-container {
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  background-color: var(--surface-color);
+  border-color: var(--border-color) !important;
+  color: var(--text-primary);
+  font-family: inherit !important;
+  font-size: 14px !important;
+}
+
+[data-theme="dark"] .ql-snow .ql-stroke {
+  stroke: var(--text-primary);
+}
+[data-theme="dark"] .ql-snow .ql-fill {
+  fill: var(--text-primary);
+}
+[data-theme="dark"] .ql-snow .ql-picker {
+  color: var(--text-primary);
+}
+
+/* Comments Section Styles */
+.comments-group {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.comment-item {
+  display: flex;
+  gap: 0.5rem;
+  background-color: rgba(99, 102, 241, 0.05);
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.comment-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.comment-content {
+  flex: 1;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.comment-author {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.comment-time {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.comment-text {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.comment-input-area {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.comment-input-area input {
+  flex: 1;
+}
+
 /* Keyframes Animations */
 @keyframes fadeIn {
   from { opacity: 0; }
