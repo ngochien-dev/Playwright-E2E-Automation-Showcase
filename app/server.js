@@ -41,9 +41,13 @@ function initializeDatabase() {
         description TEXT,
         status TEXT DEFAULT 'todo',
         priority TEXT DEFAULT 'medium',
+        subtasks TEXT DEFAULT '[]',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Hỗ trợ cập nhật schema cho database cũ
+    db.run(`ALTER TABLE tasks ADD COLUMN subtasks TEXT DEFAULT '[]'`, (err) => { /* ignore if column exists */ });
 
     db.run(`
       CREATE TABLE IF NOT EXISTS activity_logs (
@@ -182,21 +186,26 @@ app.get('/api/tasks', authenticate, (req, res) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
-    res.json(rows);
+    const formattedRows = rows.map(row => ({
+      ...row,
+      subtasks: row.subtasks ? JSON.parse(row.subtasks) : []
+    }));
+    res.json(formattedRows);
   });
 });
 
 // API Tạo mới một Task
 app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
-  const { title, description, priority } = req.body;
+  const { title, description, priority, subtasks } = req.body;
   if (!title) {
     return res.status(400).json({ error: 'Tiêu đề công việc là bắt buộc.' });
   }
   const taskPriority = priority || 'medium';
+  const taskSubtasks = subtasks ? JSON.stringify(subtasks) : '[]';
 
   db.run(
-    'INSERT INTO tasks (title, description, status, priority) VALUES (?, ?, ?, ?)',
-    [title, description || '', 'todo', taskPriority],
+    'INSERT INTO tasks (title, description, status, priority, subtasks) VALUES (?, ?, ?, ?, ?)',
+    [title, description || '', 'todo', taskPriority, taskSubtasks],
     function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -208,7 +217,8 @@ app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
           title,
           description,
           status: 'todo',
-          priority: taskPriority
+          priority: taskPriority,
+          subtasks: JSON.parse(taskSubtasks)
         });
       });
     }
@@ -218,7 +228,7 @@ app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
 // API Cập nhật nội dung hoặc trạng thái của một Task
 app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
   const { id } = req.params;
-  const { title, description, status, priority } = req.body;
+  const { title, description, status, priority, subtasks } = req.body;
 
   db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
     if (err) {
@@ -232,10 +242,11 @@ app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
     const updatedDesc = description !== undefined ? description : task.description;
     const updatedStatus = status !== undefined ? status : task.status;
     const updatedPriority = priority !== undefined ? priority : task.priority;
+    const updatedSubtasks = subtasks !== undefined ? JSON.stringify(subtasks) : (task.subtasks || '[]');
 
     db.run(
-      'UPDATE tasks SET title = ?, description = ?, status = ?, priority = ? WHERE id = ?',
-      [updatedTitle, updatedDesc, updatedStatus, updatedPriority, id],
+      'UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, subtasks = ? WHERE id = ?',
+      [updatedTitle, updatedDesc, updatedStatus, updatedPriority, updatedSubtasks, id],
       (err) => {
         if (err) {
           return res.status(500).json({ error: err.message });
@@ -246,7 +257,8 @@ app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
             title: updatedTitle,
             description: updatedDesc,
             status: updatedStatus,
-            priority: updatedPriority
+            priority: updatedPriority,
+            subtasks: updatedSubtasks ? JSON.parse(updatedSubtasks) : []
           });
         };
         if (status !== undefined && status !== task.status) {

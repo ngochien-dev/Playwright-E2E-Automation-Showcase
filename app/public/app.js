@@ -51,6 +51,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelTaskBtn = document.getElementById('cancel-task-btn');
   const closeModalBtn = document.getElementById('close-modal-btn');
   
+  // Subtasks
+  const subtasksContainer = document.getElementById('subtasks-container');
+  const addSubtaskBtn = document.getElementById('add-subtask-btn');
+  const modalSubtaskProgress = document.getElementById('modal-subtask-progress');
+  const modalSubtaskText = document.getElementById('modal-subtask-text');
+  let currentSubtasks = [];
+  
   // Các bộ lọc tìm kiếm và độ ưu tiên
   const searchInput = document.getElementById('search-input');
   const priorityFilter = document.getElementById('priority-filter');
@@ -272,6 +279,71 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- Subtasks Logic ---
+  function renderSubtasks() {
+    if (!subtasksContainer) return;
+    subtasksContainer.innerHTML = '';
+    let completedCount = 0;
+
+    currentSubtasks.forEach((subtask, index) => {
+      if (subtask.completed) completedCount++;
+      const item = document.createElement('div');
+      item.className = 'subtask-item';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = subtask.completed;
+      checkbox.addEventListener('change', (e) => {
+        currentSubtasks[index].completed = e.target.checked;
+        updateSubtaskProgress();
+      });
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = subtask.title;
+      input.placeholder = 'Tên việc con...';
+      input.addEventListener('input', (e) => {
+        currentSubtasks[index].title = e.target.value;
+      });
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-subtask-btn';
+      removeBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+      removeBtn.addEventListener('click', () => {
+        currentSubtasks.splice(index, 1);
+        renderSubtasks();
+      });
+
+      item.appendChild(checkbox);
+      item.appendChild(input);
+      item.appendChild(removeBtn);
+      subtasksContainer.appendChild(item);
+    });
+
+    updateSubtaskProgress();
+  }
+
+  function updateSubtaskProgress() {
+    if (currentSubtasks.length === 0) {
+      modalSubtaskProgress.style.width = '0%';
+      modalSubtaskText.textContent = '0/0';
+      return;
+    }
+    const completed = currentSubtasks.filter(st => st.completed).length;
+    const total = currentSubtasks.length;
+    const percent = (completed / total) * 100;
+    modalSubtaskProgress.style.width = percent + '%';
+    modalSubtaskText.textContent = `${completed}/${total}`;
+  }
+
+  if (addSubtaskBtn) {
+    addSubtaskBtn.addEventListener('click', () => {
+      currentSubtasks.push({ title: '', completed: false });
+      renderSubtasks();
+    });
+  }
+
   // Mở Modal biểu mẫu để tạo công việc mới
   openAddTaskBtn.addEventListener('click', () => {
     modalTitle.textContent = 'Tạo Công Việc Mới';
@@ -279,6 +351,8 @@ document.addEventListener('DOMContentLoaded', () => {
     taskTitleInput.value = '';
     taskDescInput.value = '';
     statusGroup.style.display = 'none'; // Task mới tạo mặc định luôn có trạng thái "todo"
+    currentSubtasks = [];
+    renderSubtasks();
     taskModal.style.display = 'flex';
   });
 
@@ -340,7 +414,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskData = {
       title: taskTitleInput.value.trim(),
       description: taskDescInput.value.trim(),
-      priority: taskPriorityInput.value
+      priority: taskPriorityInput.value,
+      subtasks: currentSubtasks.filter(st => st.title.trim() !== '') // Remove empty subtasks
     };
 
     let url = '/api/tasks';
@@ -466,11 +541,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const priorityText = task.priority === 'high' ? 'Cao' : task.priority === 'low' ? 'Thấp' : 'Trung bình';
+    
+    // Subtasks indicator
+    let subtasksIndicator = '';
+    if (task.subtasks && task.subtasks.length > 0) {
+      const completed = task.subtasks.filter(st => st.completed).length;
+      const total = task.subtasks.length;
+      subtasksIndicator = `
+        <div class="task-subtasks-indicator">
+          <i class="fa-solid fa-list-check"></i> ${completed}/${total}
+        </div>
+      `;
+    }
+
     card.innerHTML = `
       <div class="task-item-header">
         <span class="task-item-title">${escapeHtml(task.title)}</span>
       </div>
       ${task.description ? `<p class="task-item-desc">${escapeHtml(task.description)}</p>` : ''}
+      ${subtasksIndicator}
       <div class="priority-badge priority-${task.priority || 'medium'}">${priorityText}</div>
       ${role !== 'viewer' ? `
         <div class="task-item-actions">
@@ -536,6 +625,8 @@ document.addEventListener('DOMContentLoaded', () => {
     taskStatusSelect.value = task.status;
     taskPriorityInput.value = task.priority || 'medium';
     statusGroup.style.display = 'block'; // Hiển thị ô chọn trạng thái khi chỉnh sửa
+    currentSubtasks = task.subtasks ? JSON.parse(JSON.stringify(task.subtasks)) : [];
+    renderSubtasks();
     taskModal.style.display = 'flex';
   }
 

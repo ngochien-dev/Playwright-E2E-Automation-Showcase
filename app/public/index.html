@@ -259,6 +259,21 @@
             <option value="high">Cao</option>
           </select>
         </div>
+        <div class="form-group subtasks-group">
+          <label>Danh sách việc con (Subtasks)</label>
+          <div class="subtasks-progress">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="modal-subtask-progress" style="width: 0%;"></div>
+            </div>
+            <span id="modal-subtask-text">0/0</span>
+          </div>
+          <div class="subtasks-container" id="subtasks-container">
+            <!-- Việc con sẽ được thêm bằng JS -->
+          </div>
+          <button type="button" id="add-subtask-btn" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
+            <i class="fa-solid fa-plus"></i> Thêm việc con
+          </button>
+        </div>
         <div class="modal-footer">
           <button type="button" id="cancel-task-btn" class="btn btn-secondary">Hủy</button>
           <button type="submit" id="save-task-btn" class="btn btn-primary">Lưu Công Việc</button>

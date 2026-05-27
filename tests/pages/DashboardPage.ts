@@ -26,6 +26,10 @@ export class DashboardPage extends BasePage {
   readonly saveTaskBtn: Locator;
   readonly cancelTaskBtn: Locator;
 
+  // Subtasks
+  readonly addSubtaskBtn: Locator;
+  readonly subtasksContainer: Locator;
+
   // Định vị các bộ lọc tìm kiếm & độ ưu tiên
   readonly searchInput: Locator;
   readonly priorityFilter: Locator;
@@ -62,6 +66,9 @@ export class DashboardPage extends BasePage {
     this.taskStatusSelect = page.locator('#task-status');
     this.saveTaskBtn = page.locator('#save-task-btn');
     this.cancelTaskBtn = page.locator('#cancel-task-btn');
+
+    this.addSubtaskBtn = page.locator('#add-subtask-btn');
+    this.subtasksContainer = page.locator('#subtasks-container');
 
     // Bộ lọc
     this.searchInput = page.locator('#search-input');
@@ -210,5 +217,25 @@ export class DashboardPage extends BasePage {
     await this.themeToggleBtn.click();
     // Chờ hiệu ứng chuyển đổi CSS
     await this.page.waitForTimeout(300);
+  }
+
+  // --- Hỗ trợ Subtasks ---
+  async addSubtask(title: string) {
+    await this.addSubtaskBtn.click();
+    const lastSubtaskInput = this.subtasksContainer.locator('.subtask-item input[type="text"]').last();
+    await lastSubtaskInput.fill(title);
+  }
+
+  async checkSubtask(index: number, check: boolean = true) {
+    const checkbox = this.subtasksContainer.locator('.subtask-item').nth(index).locator('input[type="checkbox"]');
+    if (check) {
+      await checkbox.check();
+    } else {
+      await checkbox.uncheck();
+    }
+  }
+
+  getTaskSubtasksIndicator(taskTitle: string): Locator {
+    return this.getTaskCard(taskTitle).locator('.task-subtasks-indicator');
   }
 }
