@@ -58,6 +58,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalSubtaskText = document.getElementById('modal-subtask-text');
   let currentSubtasks = [];
   
+  // File Attachment
+  const attachmentGroup = document.getElementById('attachment-group');
+  const taskAttachment = document.getElementById('task-attachment');
+  const attachmentInfo = document.getElementById('attachment-info');
+  const attachmentLink = document.getElementById('attachment-link');
+  
   // Các bộ lọc tìm kiếm và độ ưu tiên
   const searchInput = document.getElementById('search-input');
   const priorityFilter = document.getElementById('priority-filter');
@@ -351,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
     taskTitleInput.value = '';
     taskDescInput.value = '';
     statusGroup.style.display = 'none'; // Task mới tạo mặc định luôn có trạng thái "todo"
+    if (attachmentGroup) attachmentGroup.style.display = 'none'; // Không cho upload khi tạo mới
     currentSubtasks = [];
     renderSubtasks();
     taskModal.style.display = 'flex';
@@ -362,6 +369,41 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   closeModalBtn.addEventListener('click', closeModal);
   cancelTaskBtn.addEventListener('click', closeModal);
+
+  // Lắng nghe sự kiện Upload File
+  if (taskAttachment) {
+    taskAttachment.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      const taskId = taskIdInput.value;
+      if (!file || !taskId) return;
+
+      const formData = new FormData();
+      formData.append('attachment', file);
+
+      try {
+        const response = await fetch(`/api/tasks/${taskId}/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Upload lỗi');
+
+        attachmentInfo.style.display = 'flex';
+        attachmentLink.href = data.attachment_url;
+        attachmentLink.textContent = data.attachment_name;
+        
+        await fetchTasks(); // Cập nhật lại UI chính
+      } catch (err) {
+        alert('Lỗi tải file: ' + err.message);
+      }
+      // Reset input để có thể chọn lại cùng 1 file
+      taskAttachment.value = '';
+    });
+  }
 
   // Đóng Modal khi người dùng click ra vùng tối bên ngoài card
   taskModal.addEventListener('click', (e) => {
@@ -625,6 +667,16 @@ document.addEventListener('DOMContentLoaded', () => {
     taskStatusSelect.value = task.status;
     taskPriorityInput.value = task.priority || 'medium';
     statusGroup.style.display = 'block'; // Hiển thị ô chọn trạng thái khi chỉnh sửa
+    if (attachmentGroup) {
+      attachmentGroup.style.display = 'block'; // Hiện khung tải file khi sửa
+      if (task.attachment_url) {
+        attachmentInfo.style.display = 'flex';
+        attachmentLink.href = task.attachment_url;
+        attachmentLink.textContent = task.attachment_name;
+      } else {
+        attachmentInfo.style.display = 'none';
+      }
+    }
     currentSubtasks = task.subtasks ? JSON.parse(JSON.stringify(task.subtasks)) : [];
     renderSubtasks();
     taskModal.style.display = 'flex';

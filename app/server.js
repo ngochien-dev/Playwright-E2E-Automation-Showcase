@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const multer = require('multer');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,6 +12,20 @@ const DB_PATH = path.join(__dirname, 'database.sqlite');
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Cấu hình Multer để upload file
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage: storage });
 
 // Kết nối cơ sở dữ liệu SQLite
 const db = new sqlite3.Database(DB_PATH, (err) => {
@@ -42,12 +58,16 @@ function initializeDatabase() {
         status TEXT DEFAULT 'todo',
         priority TEXT DEFAULT 'medium',
         subtasks TEXT DEFAULT '[]',
+        attachment_name TEXT,
+        attachment_url TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
     // Hỗ trợ cập nhật schema cho database cũ
     db.run(`ALTER TABLE tasks ADD COLUMN subtasks TEXT DEFAULT '[]'`, (err) => { /* ignore if column exists */ });
+    db.run(`ALTER TABLE tasks ADD COLUMN attachment_name TEXT`, (err) => { /* ignore if column exists */ });
+    db.run(`ALTER TABLE tasks ADD COLUMN attachment_url TEXT`, (err) => { /* ignore if column exists */ });
 
     db.run(`
       CREATE TABLE IF NOT EXISTS activity_logs (
@@ -290,6 +310,34 @@ app.delete('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
       });
     });
   });
+});
+
+// API Upload File Đính Kèm
+app.post('/api/tasks/:id/upload', authenticate, authorizeAdmin, upload.single('attachment'), (req, res) => {
+  const { id } = req.params;
+  if (!req.file) {
+    return res.status(400).json({ error: 'Vui lòng chọn file để tải lên.' });
+  }
+
+  const attachmentName = req.file.originalname;
+  const attachmentUrl = `/uploads/${req.file.filename}`;
+
+  db.run(
+    'UPDATE tasks SET attachment_name = ?, attachment_url = ? WHERE id = ?',
+    [attachmentName, attachmentUrl, id],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      
+      db.get('SELECT title FROM tasks WHERE id = ?', [id], (err, task) => {
+        const title = task ? task.title : `Task #${id}`;
+        logActivity(req.user.username, 'UPDATE', title, `Đã đính kèm file: ${attachmentName}`, () => {
+          res.json({ message: 'Tải file lên thành công.', attachment_name: attachmentName, attachment_url: attachmentUrl });
+        });
+      });
+    }
+  );
 });
 
 // API Lấy danh sách Lịch sử hoạt động

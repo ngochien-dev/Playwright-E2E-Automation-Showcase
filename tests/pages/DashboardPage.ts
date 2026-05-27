@@ -30,6 +30,10 @@ export class DashboardPage extends BasePage {
   readonly addSubtaskBtn: Locator;
   readonly subtasksContainer: Locator;
 
+  // File Attachment
+  readonly fileInput: Locator;
+  readonly attachmentLink: Locator;
+
   // Định vị các bộ lọc tìm kiếm & độ ưu tiên
   readonly searchInput: Locator;
   readonly priorityFilter: Locator;
@@ -69,6 +73,9 @@ export class DashboardPage extends BasePage {
 
     this.addSubtaskBtn = page.locator('#add-subtask-btn');
     this.subtasksContainer = page.locator('#subtasks-container');
+
+    this.fileInput = page.locator('#task-attachment');
+    this.attachmentLink = page.locator('#attachment-link');
 
     // Bộ lọc
     this.searchInput = page.locator('#search-input');
@@ -145,6 +152,14 @@ export class DashboardPage extends BasePage {
 
   async filterByPriority(priority: 'all' | 'low' | 'medium' | 'high') {
     await this.priorityFilter.selectOption(priority);
+  }
+
+  // Upload file đính kèm
+  async uploadAttachment(filePath: string) {
+    // Lưu ý: với file-input ẩn (display: none), Playwright vẫn upload được qua setInputFiles
+    await this.fileInput.setInputFiles(filePath);
+    // Chờ API upload file trả về thành công
+    await this.page.waitForResponse(response => response.url().includes('/upload') && response.status() === 200);
   }
 
   async moveTaskForward(title: string) {

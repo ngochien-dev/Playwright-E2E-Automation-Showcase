@@ -274,6 +274,19 @@
             <i class="fa-solid fa-plus"></i> Thêm việc con
           </button>
         </div>
+        <div class="form-group attachment-group" id="attachment-group" style="display: none;">
+          <label>File Đính Kèm</label>
+          <div class="attachment-ui">
+            <input type="file" id="task-attachment" class="file-input-hidden" />
+            <label for="task-attachment" class="btn btn-secondary btn-sm upload-btn">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Tải File Lên
+            </label>
+            <div id="attachment-info" class="attachment-info" style="display: none;">
+              <i class="fa-solid fa-paperclip"></i>
+              <a href="#" id="attachment-link" target="_blank" class="attachment-link">filename.pdf</a>
+            </div>
+          </div>
+        </div>
         <div class="modal-footer">
           <button type="button" id="cancel-task-btn" class="btn btn-secondary">Hủy</button>
           <button type="submit" id="save-task-btn" class="btn btn-primary">Lưu Công Việc</button>
