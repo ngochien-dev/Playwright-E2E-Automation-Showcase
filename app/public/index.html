@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Custom Stylesheet -->
   <link rel="stylesheet" href="styles.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -137,6 +139,10 @@
             <i class="fa-solid fa-clock-rotate-left"></i>
             <span>Lịch sử</span>
           </button>
+          <button id="open-analytics-btn" class="btn btn-secondary btn-sm" title="Thống kê">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Thống kê</span>
+          </button>
           <button id="logout-btn" class="btn btn-secondary btn-sm">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
             <span>Đăng xuất</span>
@@ -259,6 +265,21 @@
             <option value="high">Cao</option>
           </select>
         </div>
+        <div class="form-group">
+          <label for="task-due-date">Thời Hạn (Deadline)</label>
+          <input type="date" id="task-due-date">
+        </div>
+        <div class="form-group">
+          <label for="task-tags">Gắn Thẻ (Cách nhau bằng dấu phẩy)</label>
+          <input type="text" id="task-tags" placeholder="Ví dụ: Bug, UI, Backend">
+        </div>
+        <div class="form-group">
+          <label for="task-assignee">Người Phụ Trách</label>
+          <select id="task-assignee">
+            <option value="">-- Chọn người phụ trách --</option>
+            <!-- Users sẽ được render bằng JS -->
+          </select>
+        </div>
         <div class="form-group subtasks-group">
           <label>Danh sách việc con (Subtasks)</label>
           <div class="subtasks-progress">
@@ -295,22 +316,37 @@
     </div>
   </div>
 
-  <!-- ================= ACTIVITY TIMELINE DRAWER ================= -->
+  <!-- Activity Log Drawer -->
   <div id="activity-drawer" class="drawer-backdrop" style="display: none;">
     <div class="glass-card drawer-card">
       <div class="drawer-header">
-        <h3><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử Hoạt Động</h3>
+        <h3><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử hoạt động</h3>
         <button id="close-drawer-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="drawer-content">
         <div id="activity-list" class="timeline">
-          <!-- Các hoạt động được render động ở đây -->
+          <!-- Các sự kiện lịch sử sẽ được render bằng JS -->
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Custom Scripts -->
+  <!-- Analytics Drawer -->
+  <div id="analytics-drawer" class="drawer-backdrop" style="display: none;">
+    <div class="glass-card drawer-card" style="width: 500px;">
+      <div class="drawer-header">
+        <h3><i class="fa-solid fa-chart-pie"></i> Thống kê tiến độ</h3>
+        <button id="close-analytics-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="drawer-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+        <div style="width: 100%; max-width: 400px;">
+          <canvas id="taskChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
   <script src="app.js"></script>
 </body>
 </html>

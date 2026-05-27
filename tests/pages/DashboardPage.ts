@@ -98,6 +98,9 @@ export class DashboardPage extends BasePage {
     await this.resetDbBtn.click();
     // Đợi API reset database trả về response thành công
     await this.page.waitForResponse(response => response.url().includes('/api/db/reset') && response.status() === 200);
+    // Wait for the subsequent fetchTasks() call triggered by the frontend to finish
+    await this.page.waitForResponse(response => response.url().includes('/api/tasks') && response.request().method() === 'GET' && response.status() === 200);
+    await this.page.waitForTimeout(500);
   }
 
   async openCreateTaskModal() {

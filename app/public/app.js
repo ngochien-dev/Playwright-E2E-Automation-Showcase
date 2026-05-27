@@ -69,11 +69,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const priorityFilter = document.getElementById('priority-filter');
   const taskPriorityInput = document.getElementById('task-priority');
 
+  // Phase 3 Features
+  const taskDueDateInput = document.getElementById('task-due-date');
+  const taskTagsInput = document.getElementById('task-tags');
+  const taskAssigneeSelect = document.getElementById('task-assignee');
+
   // Ngăn kéo lịch sử hoạt động
   const openActivityBtn = document.getElementById('open-activity-btn');
   const closeActivityBtn = document.getElementById('close-drawer-btn');
   const activityDrawer = document.getElementById('activity-drawer');
   const activityList = document.getElementById('activity-list');
+
+  // Ngăn kéo Thống kê
+  const openAnalyticsBtn = document.getElementById('open-analytics-btn');
+  const closeAnalyticsBtn = document.getElementById('close-analytics-btn');
+  const analyticsDrawer = document.getElementById('analytics-drawer');
+  const ctxChart = document.getElementById('taskChart');
+  let taskChartInstance = null;
 
   // Nút chuyển đổi Giao diện Tối/Sáng
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -138,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     fetchTasks();
+    fetchUsers();
   }
 
   // --- Lắng nghe sự kiện (Event Listeners) ---
@@ -356,6 +369,9 @@ document.addEventListener('DOMContentLoaded', () => {
     taskIdInput.value = '';
     taskTitleInput.value = '';
     taskDescInput.value = '';
+    if (taskDueDateInput) taskDueDateInput.value = '';
+    if (taskTagsInput) taskTagsInput.value = '';
+    if (taskAssigneeSelect) taskAssigneeSelect.value = '';
     statusGroup.style.display = 'none'; // Task mới tạo mặc định luôn có trạng thái "todo"
     if (attachmentGroup) attachmentGroup.style.display = 'none'; // Không cho upload khi tạo mới
     currentSubtasks = [];
@@ -448,6 +464,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Mở ngăn kéo thống kê
+  if (openAnalyticsBtn) {
+    openAnalyticsBtn.addEventListener('click', () => {
+      analyticsDrawer.style.display = 'flex';
+      renderChart();
+    });
+  }
+
+  // Đóng ngăn kéo thống kê
+  if (closeAnalyticsBtn) {
+    closeAnalyticsBtn.addEventListener('click', () => {
+      analyticsDrawer.style.display = 'none';
+    });
+  }
+
+  if (analyticsDrawer) {
+    analyticsDrawer.addEventListener('click', (e) => {
+      if (e.target === analyticsDrawer) {
+        analyticsDrawer.style.display = 'none';
+      }
+    });
+  }
+
   // Gửi Form (Lưu hoặc cập nhật thông tin công việc)
   taskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -457,7 +496,10 @@ document.addEventListener('DOMContentLoaded', () => {
       title: taskTitleInput.value.trim(),
       description: taskDescInput.value.trim(),
       priority: taskPriorityInput.value,
-      subtasks: currentSubtasks.filter(st => st.title.trim() !== '') // Remove empty subtasks
+      subtasks: currentSubtasks.filter(st => st.title.trim() !== ''), // Remove empty subtasks
+      due_date: taskDueDateInput ? taskDueDateInput.value : null,
+      tags: taskTagsInput ? taskTagsInput.value.split(',').map(t => t.trim()).filter(t => t !== '') : [],
+      assignee: taskAssigneeSelect ? taskAssigneeSelect.value : null
     };
 
     let url = '/api/tasks';
@@ -511,6 +553,28 @@ document.addEventListener('DOMContentLoaded', () => {
       await fetchActivities();
     } catch (err) {
       console.error('Lỗi khi fetch tasks:', err);
+    }
+  }
+
+  async function fetchUsers() {
+    if (!token) return;
+    try {
+      const response = await fetch('/api/users', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Không thể tải danh sách users');
+      const users = await response.json();
+      if (taskAssigneeSelect) {
+        taskAssigneeSelect.innerHTML = '<option value="">-- Chọn người phụ trách --</option>';
+        users.forEach(u => {
+          const option = document.createElement('option');
+          option.value = u.username;
+          option.textContent = u.username;
+          taskAssigneeSelect.appendChild(option);
+        });
+      }
+    } catch (err) {
+      console.error('Lỗi fetch users:', err);
     }
   }
 
@@ -596,13 +660,52 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }
 
+    // Phase 3 Meta Data
+    let dueDateHtml = '';
+    if (task.due_date) {
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const dueDate = new Date(task.due_date);
+      const diffTime = dueDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      let badgeClass = 'due-date-badge';
+      let icon = 'fa-regular fa-calendar';
+      if (diffDays < 0) {
+        badgeClass += ' due-date-overdue';
+        icon = 'fa-solid fa-triangle-exclamation';
+      } else if (diffDays <= 2) {
+        badgeClass += ' due-date-warning';
+        icon = 'fa-solid fa-clock';
+      }
+      
+      const formattedDate = dueDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      dueDateHtml = `<div class="${badgeClass}"><i class="${icon}"></i> ${formattedDate}</div>`;
+    }
+
+    let tagsHtml = '';
+    if (task.tags && task.tags.length > 0) {
+      tagsHtml = task.tags.map(tag => `<span class="tag-pill">${escapeHtml(tag)}</span>`).join('');
+    }
+
+    let assigneeHtml = '';
+    if (task.assignee) {
+      const initial = task.assignee.charAt(0).toUpperCase();
+      assigneeHtml = `<div class="assignee-avatar" title="Phụ trách: ${escapeHtml(task.assignee)}">${initial}</div>`;
+    }
+
     card.innerHTML = `
       <div class="task-item-header">
         <span class="task-item-title">${escapeHtml(task.title)}</span>
       </div>
       ${task.description ? `<p class="task-item-desc">${escapeHtml(task.description)}</p>` : ''}
       ${subtasksIndicator}
-      <div class="priority-badge priority-${task.priority || 'medium'}">${priorityText}</div>
+      <div class="card-meta">
+        <div class="priority-badge priority-${task.priority || 'medium'}">${priorityText}</div>
+        ${dueDateHtml}
+        ${tagsHtml}
+        ${assigneeHtml}
+      </div>
       ${role !== 'viewer' ? `
         <div class="task-item-actions">
           ${task.status !== 'completed' ? `
@@ -666,6 +769,9 @@ document.addEventListener('DOMContentLoaded', () => {
     taskDescInput.value = task.description || '';
     taskStatusSelect.value = task.status;
     taskPriorityInput.value = task.priority || 'medium';
+    if (taskDueDateInput) taskDueDateInput.value = task.due_date || '';
+    if (taskTagsInput) taskTagsInput.value = (task.tags && task.tags.length > 0) ? task.tags.join(', ') : '';
+    if (taskAssigneeSelect) taskAssigneeSelect.value = task.assignee || '';
     statusGroup.style.display = 'block'; // Hiển thị ô chọn trạng thái khi chỉnh sửa
     if (attachmentGroup) {
       attachmentGroup.style.display = 'block'; // Hiện khung tải file khi sửa
@@ -790,6 +896,57 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="timeline-title">${act.task_title !== '-' ? `<strong>${escapeHtml(act.task_title)}</strong>: ` : ''}${escapeHtml(act.details)}</div>
       `;
       activityList.appendChild(item);
+    });
+  }
+
+  // --- Analytics Chart Logic ---
+  function renderChart() {
+    if (!ctxChart) return;
+    
+    let todoCount = 0;
+    let progressCount = 0;
+    let completedCount = 0;
+    tasks.forEach(t => {
+      if (t.status === 'todo') todoCount++;
+      else if (t.status === 'in_progress') progressCount++;
+      else if (t.status === 'completed') completedCount++;
+    });
+
+    if (taskChartInstance) {
+      taskChartInstance.destroy();
+    }
+
+    const isLightMode = document.body.classList.contains('light-mode');
+    const textColor = isLightMode ? '#0f0c29' : '#fff';
+
+    taskChartInstance = new Chart(ctxChart, {
+      type: 'pie',
+      data: {
+        labels: ['Cần Làm', 'Đang Làm', 'Đã Xong'],
+        datasets: [{
+          data: [todoCount, progressCount, completedCount],
+          backgroundColor: [
+            'rgba(239, 68, 68, 0.7)',
+            'rgba(245, 158, 11, 0.7)',
+            'rgba(16, 185, 129, 0.7)'
+          ],
+          borderColor: [
+            'rgba(239, 68, 68, 1)',
+            'rgba(245, 158, 11, 1)',
+            'rgba(16, 185, 129, 1)'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: textColor }
+          }
+        }
+      }
     });
   }
 
