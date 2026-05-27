@@ -6,6 +6,7 @@ export class DashboardPage extends BasePage {
   readonly logoutBtn: Locator;
   readonly resetDbBtn: Locator;
   readonly openAddTaskBtn: Locator;
+  readonly themeToggleBtn: Locator;
 
   // Định vị các Cột & Danh sách Task
   readonly listTodo: Locator;
@@ -43,6 +44,7 @@ export class DashboardPage extends BasePage {
     this.logoutBtn = page.locator('#logout-btn');
     this.resetDbBtn = page.locator('#reset-db-btn');
     this.openAddTaskBtn = page.locator('#open-add-task-btn');
+    this.themeToggleBtn = page.locator('#theme-toggle-btn');
 
     this.listTodo = page.locator('#list-todo');
     this.listInProgress = page.locator('#list-in-progress');
@@ -202,5 +204,11 @@ export class DashboardPage extends BasePage {
 
   async getActivityLogTexts(): Promise<string[]> {
     return this.timelineItems.allTextContents();
+  }
+
+  async toggleTheme() {
+    await this.themeToggleBtn.click();
+    // Chờ hiệu ứng chuyển đổi CSS
+    await this.page.waitForTimeout(300);
   }
 }

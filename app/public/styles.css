@@ -28,6 +28,21 @@
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Light Mode Theme overrides */
+body.light-mode {
+  --bg-color: #f8fafc;
+  --card-bg: rgba(255, 255, 255, 0.85);
+  --border-color: rgba(0, 0, 0, 0.1);
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  
+  --primary-glow: rgba(99, 102, 241, 0.15);
+  --todo-glow: rgba(245, 158, 11, 0.1);
+  --progress-glow: rgba(59, 130, 246, 0.1);
+  --completed-glow: rgba(16, 185, 129, 0.1);
+}
+
 * {
   margin: 0;
   padding: 0;

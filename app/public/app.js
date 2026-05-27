@@ -62,6 +62,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const activityDrawer = document.getElementById('activity-drawer');
   const activityList = document.getElementById('activity-list');
 
+  // Nút chuyển đổi Giao diện Tối/Sáng
+  const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  if (themeToggleBtn) {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') {
+      document.body.classList.add('light-mode');
+      themeToggleBtn.querySelector('i').className = 'fa-solid fa-sun';
+      themeToggleBtn.querySelector('.theme-text').textContent = 'Sáng';
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+      const isLight = document.body.classList.toggle('light-mode');
+      if (isLight) {
+        localStorage.setItem('theme', 'light');
+        themeToggleBtn.querySelector('i').className = 'fa-solid fa-sun';
+        themeToggleBtn.querySelector('.theme-text').textContent = 'Sáng';
+      } else {
+        localStorage.setItem('theme', 'dark');
+        themeToggleBtn.querySelector('i').className = 'fa-solid fa-moon';
+        themeToggleBtn.querySelector('.theme-text').textContent = 'Tối';
+      }
+    });
+  }
+
   // --- Kiểm tra đăng nhập ban đầu ---
   if (token) {
     showDashboard();
