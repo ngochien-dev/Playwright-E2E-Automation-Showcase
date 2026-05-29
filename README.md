@@ -48,12 +48,32 @@ The target application has been localized to Vietnamese (representing localized 
 │   │   ├── LoginPage.ts       # POM: Object mapping for the authentication view
 │   │   └── DashboardPage.ts   # POM: Object mapping for the task manager dashboard
 │   ├── ui/
-│   │   ├── auth.spec.ts       # UI Login & Auth flow verification
-│   │   ├── ddt-tasks.spec.ts  # Parameterized Data-Driven UI testing
+│   │   ├── activity-log.spec.ts # Audit trail E2E verification
+│   │   ├── analytics.spec.ts    # Analytics chart rendering validation
+│   │   ├── assignment.spec.ts   # Task assignment & user lookup test
+│   │   ├── auth.spec.ts         # UI Login & Auth flow verification
+│   │   ├── batch-actions.spec.ts # Bulk actions & priorities select mode test [NEW]
+│   │   ├── comments.spec.ts     # Comment system E2E verification
+│   │   ├── ddt-tasks.spec.ts    # Parameterized Data-Driven UI testing
+│   │   ├── dependencies.spec.ts # Task dependency block validation
+│   │   ├── due-dates.spec.ts    # Due date rendering & warning levels test
+│   │   ├── export-csv.spec.ts   # CSV export file contents validation
+│   │   ├── file-upload.spec.ts  # File upload & download verification
 │   │   ├── network-mock.spec.ts # Network interception & API Response Mocking (`page.route`)
-│   │   └── tasks.spec.ts      # End-to-end task CRUD flows on the UI board
+│   │   ├── notifications.spec.ts # Real-time notification badge & dropdown test
+│   │   ├── quick-subtasks.spec.ts # Quick subtask check toggle on card hover test [NEW]
+│   │   ├── rbac.spec.ts         # Role-Based Access Control E2E validation
+│   │   ├── realtime-sync.spec.ts # SSE Real-time synchronization verification
+│   │   ├── recycle-bin.spec.ts  # Soft-delete, restore, and permanent delete test
+│   │   ├── register.spec.ts     # Multi-role user registration E2E validation
+│   │   ├── rich-text.spec.ts    # Rich Text Editor (Quill.js) E2E verification
+│   │   ├── search-highlight.spec.ts # Live search visual highlighting and dimming test [NEW]
+│   │   ├── search-priority.spec.ts # Filtering by keyword/priority test
+│   │   ├── subtasks.spec.ts     # Checklist subtask creation & progress bar test
+│   │   └── tasks.spec.ts        # End-to-end task CRUD flows on the UI board
 │   └── visual/
-│       ├── visual.spec.ts     # Visual Regression & Snapshot Testing
+│       ├── dark-mode.spec.ts    # Dark/Light mode theme visual comparison
+│       ├── visual.spec.ts       # Visual Regression & Snapshot Testing
 │       └── visual.spec.ts-snapshots/ # Platform baseline reference screenshots
 ├── Dockerfile                 # Multi-stage build Dockerfile for the web application
 ├── docker-compose.yml         # Orchestrates target app health checks & Playwright container tests
@@ -93,7 +113,7 @@ The target application has been localized to Vietnamese (representing localized 
    ```bash
    npm run start:app
    ```
-   *The application will start at [http://localhost:3000](http://localhost:3000). You can log in manually using username: `admin` and password: `password123`.*
+   *The application will start at [http://localhost:3001](http://localhost:3001). You can log in manually using username: `admin` and password: `password123`.*
 
 5. **Run the Automated Test Suite:**
    *Open a new terminal window and run:*
@@ -122,25 +142,24 @@ To verify the test suite in a clean, isolated container environment matching CI:
 
 ## 🧪 Testing Coverage Details
 
-### 1. E2E UI Testing (`tests/ui/`)
-Utilizes a modular **Page Object Model (POM)** structure.
-- **`auth.spec.ts`**: Verifies login form rendering, invalid credentials validation alerts, successful session redirection, and secure logout.
-- **`tasks.spec.ts`**: Validates task creation, column state progression (To Do ➔ In Progress ➔ Completed), detail updates via modals, and task deletion.
+The project features a **102 test cases suite** testing across all core components of a modern collaborative web application.
 
-### 2. Visual Regression Testing (`tests/visual/`)
-- **`visual.spec.ts`**: Uses `expect(locator).toHaveScreenshot()` to capture specific layout blocks (Login panel, Dashboard headers) and compares them against baselines to verify layout integrity (detecting font rendering shifts, color changes, and alignment issues).
+### 🌟 Premium Features Implemented (Phase 5 & 6)
+- **SSE Real-time Synchronization:** Utilizes Server-Sent Events to automatically synchronize client dashboards in real-time when another user makes changes. Verified via parallel multi-browser context testing (`tests/ui/realtime-sync.spec.ts`).
+- **In-app Notification Center:** Glassmorphic notification bell with unread badge counters. Generates Toast alerts and database notifications for assignees/commenters.
+- **Soft-Delete & Recycle Bin:** Standard deletion puts cards in a drawer-based Recycle Bin from which they can be restored or permanently removed.
+- **Task Dependencies:** Prevents completing blocked tasks before their dependencies are resolved (returns `400 Bad Request` at backend and triggers modal block in UI).
+- **Kanban Board Batch Actions:** Multi-select mode allowing users to check multiple cards and apply bulk priority updates or move them to the Recycle Bin in a single request (`PUT /api/tasks/batch`).
+- **Card Subtasks Quick-Toggle:** Hovering over a card renders its checklists directly on the board, allowing instant status updates without opening modals.
+- **Live Search Task Highlight:** Goggles neon visual highlights around matching task cards and dims non-matching ones, preserving columns layout.
 
-### 3. API Mocking & Network Interception (`tests/ui/network-mock.spec.ts`)
-- **`network-mock.spec.ts`**: Intercepts outgoing HTTP calls (`GET /api/tasks`) using `page.route` to return pre-defined mock datasets. This ensures the frontend layout can be tested independently of DB states or backend availability.
-
-### 4. Data-Driven Testing (DDT) (`tests/ui/ddt-tasks.spec.ts`)
-- **`ddt-tasks.spec.ts`**: Sources multiple testing profiles dynamically from an external JSON file (`tests/data/tasks-data.json`), loop-validating sequential scenarios dynamically.
-
-### 5. REST API Testing (`tests/api/`)
-- **`tasks-api.spec.ts`**: Bypasses the UI browser to verify backend HTTP endpoints directly. Tests token validation (JWT), correct HTTP response status codes (200 OK, 201 Created, 401 Unauthorized), and response JSON schema properties.
-
-### 6. Database Layer Validation (`tests/db/`)
-- **`db-check.spec.ts`**: Directly connects to the physical SQLite database using `sqlite3` driver. Executes queries on the database after UI and API operations to verify physical record synchronization (ensuring data integrity between frontend and database disk).
+### 🔍 Automated Testing Layers
+1. **End-to-End UI Testing (`tests/ui/`):** Comprehensive browser test coverage verifying all user interactions, workflows, drag-and-drop, and forms validations.
+2. **Visual Regression Testing (`tests/visual/`):** Pixel-matching checks using `toHaveScreenshot()` to catch visual regressions on theme variations (Dark/Light Mode) and critical modules.
+3. **API Mocking (`tests/ui/network-mock.spec.ts`):** Uses Playwright's `page.route` to mock JSON payloads and network responses, validating UI resiliency.
+4. **Data-Driven Testing (DDT) (`tests/ui/ddt-tasks.spec.ts`):** Executes tests dynamically sourced from JSON matrices.
+5. **REST API Testing (`tests/api/`):** Headless verification of backend REST API structures, authorization scopes, JWT handling, and return payload schemes.
+6. **Database Layer Validation (`tests/db/`):** Connects directly to SQLite using `sqlite3` raw queries to audit database state matches post UI/API operations.
 
 ---
 
@@ -150,3 +169,5 @@ Utilizes a modular **Page Object Model (POM)** structure.
 - **Database Reset Teardown API:** Integrates a dedicated `/api/db/reset` API endpoint invoked in `beforeEach` setups to ensure every test run starts with a clean database state.
 - **Serial Test Execution:** Configured `workers: 1` in `playwright.config.ts` to prevent database write conflicts/locks on the embedded SQLite file.
 - **Auto-Capture Diagnostics:** Configured to capture screenshots and video recordings *only on failure* to aid debugging.
+- **Express Route Ordering:** Static endpoint routes (e.g. `/api/tasks/batch`) are resolved before parameterized endpoints (e.g. `/api/tasks/:id`) to prevent matching collisions.
+- **Timezone-Agnostic Calculations:** Date checks (e.g., due date badge warning states) are performed by comparing absolute timestamps (`diffTime`), ensuring consistent tests across diverse runner environments.

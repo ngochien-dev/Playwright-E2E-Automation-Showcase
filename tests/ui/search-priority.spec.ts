@@ -47,21 +47,23 @@ test.describe('Kiểm thử Tìm Kiếm & Lọc Độ Ưu Tiên (Search & Priori
     // 2. Nhập từ khóa "bảo mật" vào ô tìm kiếm
     await dashboardPage.searchTask('bảo mật');
 
-    // 3. Xác minh chỉ có task "Báo cáo lỗi bảo mật" hiển thị
-    await expect(dashboardPage.getTaskCard('Báo cáo lỗi bảo mật')).toBeVisible();
-    await expect(dashboardPage.getTaskCard('Viết tài liệu API')).toBeHidden();
+    // 3. Xác minh task "Báo cáo lỗi bảo mật" được highlight, task "Viết tài liệu API" bị mờ
+    await expect(dashboardPage.getTaskCard('Báo cáo lỗi bảo mật')).toHaveClass(/search-highlight/);
+    await expect(dashboardPage.getTaskCard('Viết tài liệu API')).toHaveClass(/search-dimmed/);
 
     // 4. Nhập từ khóa "hướng dẫn"
     await dashboardPage.searchTask('hướng dẫn');
 
-    // 5. Xác minh chỉ có task "Viết tài liệu API" hiển thị
-    await expect(dashboardPage.getTaskCard('Báo cáo lỗi bảo mật')).toBeHidden();
-    await expect(dashboardPage.getTaskCard('Viết tài liệu API')).toBeVisible();
+    // 5. Xác minh task "Viết tài liệu API" được highlight, task "Báo cáo lỗi bảo mật" bị mờ
+    await expect(dashboardPage.getTaskCard('Báo cáo lỗi bảo mật')).toHaveClass(/search-dimmed/);
+    await expect(dashboardPage.getTaskCard('Viết tài liệu API')).toHaveClass(/search-highlight/);
 
-    // 6. Xóa từ khóa tìm kiếm -> Tất cả hiển thị lại
+    // 6. Xóa từ khóa tìm kiếm -> Tất cả hiển thị bình thường (không highlight/dimmed)
     await dashboardPage.searchTask('');
-    await expect(dashboardPage.getTaskCard('Báo cáo lỗi bảo mật')).toBeVisible();
-    await expect(dashboardPage.getTaskCard('Viết tài liệu API')).toBeVisible();
+    await expect(dashboardPage.getTaskCard('Báo cáo lỗi bảo mật')).not.toHaveClass(/search-highlight/);
+    await expect(dashboardPage.getTaskCard('Báo cáo lỗi bảo mật')).not.toHaveClass(/search-dimmed/);
+    await expect(dashboardPage.getTaskCard('Viết tài liệu API')).not.toHaveClass(/search-highlight/);
+    await expect(dashboardPage.getTaskCard('Viết tài liệu API')).not.toHaveClass(/search-dimmed/);
   });
 
   test('nên lọc danh sách công việc chính xác theo phân loại độ ưu tiên', async () => {

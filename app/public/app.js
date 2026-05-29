@@ -787,21 +787,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedPriority = priorityFilter ? priorityFilter.value : 'all';
 
     tasks.forEach(task => {
-      // Áp dụng bộ lọc tìm kiếm và độ ưu tiên
-      if (searchTerm) {
-        const titleMatch = task.title && task.title.toLowerCase().includes(searchTerm);
-        const descMatch = task.description && task.description.toLowerCase().includes(searchTerm);
-        if (!titleMatch && !descMatch) {
-          return;
-        }
-      }
-
+      // Áp dụng bộ lọc độ ưu tiên (vẫn ẩn các task không khớp độ ưu tiên)
       if (selectedPriority !== 'all') {
         if (task.priority !== selectedPriority) {
           return;
         }
       }
+
       const taskEl = createTaskCard(task);
+
+      // Áp dụng tìm kiếm highlight / dim
+      if (searchTerm) {
+        const titleMatch = task.title && task.title.toLowerCase().includes(searchTerm);
+        const descMatch = task.description && task.description.toLowerCase().includes(searchTerm);
+        if (titleMatch || descMatch) {
+          taskEl.classList.add('search-highlight');
+        } else {
+          taskEl.classList.add('search-dimmed');
+        }
+      }
 
       if (task.status === 'todo') {
         listTodo.appendChild(taskEl);
@@ -866,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       let badgeClass = 'due-date-badge';
       let icon = 'fa-regular fa-calendar';
-      if (diffDays < 0) {
+      if (diffTime < 0) {
         badgeClass += ' due-date-overdue';
         icon = 'fa-solid fa-triangle-exclamation';
       } else if (diffDays <= 2) {

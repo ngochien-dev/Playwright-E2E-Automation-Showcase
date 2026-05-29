@@ -210,9 +210,31 @@ export class DashboardPage extends BasePage {
     } else {
       targetList = this.listCompleted;
     }
+    // Thử drag-and-drop, nếu không trigger API (Firefox issue) thì retry
+    const responsePromise = this.page.waitForResponse(
+      response => response.url().includes('/api/tasks/') && response.status() === 200
+    );
     await card.dragTo(targetList);
-    // Đợi API cập nhật trạng thái task trả về thành công
-    await this.page.waitForResponse(response => response.url().includes('/api/tasks/') && response.status() === 200);
+    try {
+      await Promise.race([
+        responsePromise,
+        this.page.waitForTimeout(5000).then(() => { throw new Error('drag-timeout'); })
+      ]);
+    } catch {
+      // Fallback: retry drag with manual mouse steps for Firefox compatibility
+      const cardBox = await card.boundingBox();
+      const targetBox = await targetList.boundingBox();
+      if (cardBox && targetBox) {
+        const responsePromise2 = this.page.waitForResponse(
+          response => response.url().includes('/api/tasks/') && response.status() === 200
+        );
+        await this.page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
+        await this.page.mouse.down();
+        await this.page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
+        await this.page.mouse.up();
+        await responsePromise2;
+      }
+    }
     await this.page.waitForTimeout(300);
   }
 

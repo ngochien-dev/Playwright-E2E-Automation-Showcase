@@ -43,4 +43,29 @@ test.describe('Kiểm thử Tính năng Xuất dữ liệu (Export CSV)', () => 
     expect(fileContent).toContain('ID,Tiêu đề,Mô tả,Trạng thái,Độ ưu tiên,Người được giao,Ngày hết hạn,Thẻ');
     expect(fileContent).toContain('Task hệ thống ban đầu');
   });
+
+  test('nên xuất file CSV chứa chính xác số dòng tương ứng với các task hiện có', async ({ page }) => {
+    // 1. Tạo thêm 2 task mới
+    await dashboardPage.createTask('Export Task 1', 'Mô tả 1');
+    await dashboardPage.createTask('Export Task 2', 'Mô tả 2');
+
+    // 2. Chờ sự kiện download bắt đầu
+    const downloadPromise = page.waitForEvent('download');
+    await page.click('#export-csv-btn');
+    const download = await downloadPromise;
+
+    // 3. Đọc nội dung file tải xuống
+    const downloadPath = await download.path();
+    const fileContent = fs.readFileSync(downloadPath!, 'utf-8');
+
+    // 4. Phân tích số dòng (bỏ dòng tiêu đề và dòng trống ở cuối)
+    const lines = fileContent.split('\n').filter(line => line.trim() !== '');
+    
+    // Tổng số task hiện có: 1 task mặc định lúc reset + 2 task vừa tạo = 3 tasks.
+    // Số dòng trong CSV: 1 dòng header + 3 dòng tasks = 4 dòng.
+    expect(lines.length).toBe(4);
+    
+    expect(fileContent).toContain('Export Task 1');
+    expect(fileContent).toContain('Export Task 2');
+  });
 });

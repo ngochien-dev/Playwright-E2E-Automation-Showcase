@@ -1423,3 +1423,15 @@ body.batch-select-active .task-item {
   border-color: rgba(99, 102, 241, 0.5);
   color: #fff;
 }
+
+/* Live Search Highlight & Dim */
+.task-item.search-highlight {
+  border: 1px solid #06b6d4 !important;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.45) !important;
+  transform: scale(1.02);
+}
+
+.task-item.search-dimmed {
+  opacity: 0.25 !important;
+  filter: grayscale(80%);
+}

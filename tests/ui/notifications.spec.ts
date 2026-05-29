@@ -66,4 +66,32 @@ test.describe('Kiểm thử Trung Tâm Thông Báo (In-App Notification Center)'
     await expect(notificationItem).not.toHaveClass(/unread/);
     await expect(badge).toBeHidden();
   });
+
+  test('nên bật/tắt dropdown thông báo khi click chuông và đóng lại khi click ra ngoài', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.navigate();
+    await loginPage.login('admin', 'password123');
+
+    const bellBtn = page.locator('#notification-bell-btn');
+    const dropdown = page.locator('#notification-dropdown');
+
+    // Mặc định dropdown bị ẩn
+    await expect(dropdown).toBeHidden();
+
+    // Click vào chuông để hiển thị dropdown
+    await bellBtn.click();
+    await expect(dropdown).toBeVisible();
+
+    // Click chuông lần nữa để ẩn dropdown
+    await bellBtn.click();
+    await expect(dropdown).toBeHidden();
+
+    // Click chuông để hiện lại
+    await bellBtn.click();
+    await expect(dropdown).toBeVisible();
+
+    // Click vào vùng khác ngoài dropdown (ví dụ click vào h2 tiêu đề "Bảng Công Việc")
+    await page.click('h2:has-text("Bảng Công Việc")');
+    await expect(dropdown).toBeHidden();
+  });
 });
