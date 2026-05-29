@@ -1,0 +1,24 @@
+[
+  {
+    "name": "Lỗi Sản phẩm (Product Defects)",
+    "description": "Test thất bại do lỗi thực tế trong ứng dụng",
+    "matchedStatuses": ["failed"]
+  },
+  {
+    "name": "Lỗi Test không ổn định (Flaky Tests)",
+    "description": "Test thất bại do timeout hoặc môi trường không ổn định",
+    "matchedStatuses": ["broken"],
+    "messageRegex": ".*timeout.*|.*ECONNREFUSED.*|.*net::ERR.*"
+  },
+  {
+    "name": "Lỗi Cấu hình Test (Test Configuration Issues)",
+    "description": "Test bị lỗi do cấu hình sai hoặc thiếu setup",
+    "matchedStatuses": ["broken"],
+    "messageRegex": ".*Cannot find.*|.*is not defined.*|.*ENOENT.*"
+  },
+  {
+    "name": "Test bị bỏ qua (Skipped Tests)",
+    "description": "Test bị skip có chủ đích",
+    "matchedStatuses": ["skipped"]
+  }
+]

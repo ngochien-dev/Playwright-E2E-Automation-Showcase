@@ -1,0 +1,8 @@
+{
+  "name": "Local Machine",
+  "type": "local",
+  "buildName": "Playwright E2E Automation Showcase #102",
+  "buildUrl": "https://github.com/ngochien-dev/Playwright-E2E-Automation-Showcase",
+  "reportName": "SleekTask Manager - E2E Test Report",
+  "reportUrl": "https://ngochien-dev.github.io/Playwright-E2E-Automation-Showcase/"
+}
