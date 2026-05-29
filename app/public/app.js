@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let role = localStorage.getItem('role') || '';
   let tasks = [];
   let eventSource = null;
+  let isBatchSelectMode = false;
+  let selectedTaskIds = [];
 
   function connectSSE() {
     if (eventSource) {
@@ -107,6 +109,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const taskTagsInput = document.getElementById('task-tags');
   const taskAssigneeSelect = document.getElementById('task-assignee');
   const taskDependencySelect = document.getElementById('task-dependency');
+  
+  // Phase 6 DOM elements
+  const batchSelectBtn = document.getElementById('batch-select-btn');
+  const batchActionBar = document.getElementById('batch-action-bar');
+  const batchSelectedCount = document.getElementById('batch-selected-count');
+  const batchPriorityHigh = document.getElementById('batch-priority-high');
+  const batchPriorityMedium = document.getElementById('batch-priority-medium');
+  const batchPriorityLow = document.getElementById('batch-priority-low');
+  const batchArchiveBtn = document.getElementById('batch-archive-btn');
+  const batchCancelBtn = document.getElementById('batch-cancel-btn');
   
   // Nút Export CSV
   const exportCsvBtn = document.getElementById('export-csv-btn');
@@ -220,10 +232,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (role === 'viewer') {
       openAddTaskBtn.style.display = 'none';
       resetDbBtn.style.display = 'none';
+      if (batchSelectBtn) batchSelectBtn.style.display = 'none';
       if (openTrashBtn) openTrashBtn.style.display = 'none';
     } else {
       openAddTaskBtn.style.display = 'block';
       resetDbBtn.style.display = 'block';
+      if (batchSelectBtn) batchSelectBtn.style.display = 'block';
       if (openTrashBtn) openTrashBtn.style.display = 'block';
     }
     
@@ -350,6 +364,10 @@ document.addEventListener('DOMContentLoaded', () => {
     username = '';
     role = '';
     tasks = [];
+    isBatchSelectMode = false;
+    selectedTaskIds = [];
+    document.body.classList.remove('batch-select-active');
+    updateBatchBar();
     localStorage.removeItem('token');
     localStorage.removeItem('username');
     localStorage.removeItem('role');
@@ -882,12 +900,25 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }
 
+    // Subtasks quick checklist
+    let quickSubtasksHtml = '';
+    if (task.subtasks && task.subtasks.length > 0) {
+      const itemsHtml = task.subtasks.map((st, idx) => `
+        <div class="card-quick-subtasks-item ${st.completed ? 'completed' : ''}" data-idx="${idx}">
+          <input type="checkbox" ${st.completed ? 'checked' : ''} />
+          <span>${escapeHtml(st.title || `Subtask ${idx + 1}`)}</span>
+        </div>
+      `).join('');
+      quickSubtasksHtml = `<div class="card-quick-subtasks">${itemsHtml}</div>`;
+    }
+
     card.innerHTML = `
       <div class="task-item-header">
         <span class="task-item-title">${escapeHtml(task.title)}</span>
       </div>
       ${task.description ? `<p class="task-item-desc">${escapeHtml(stripHtml(task.description))}</p>` : ''}
       ${subtasksIndicator}
+      ${quickSubtasksHtml}
       ${dependencyHtml}
       <div class="card-meta">
         <div class="priority-badge priority-${task.priority || 'medium'}">${priorityText}</div>
@@ -912,10 +943,18 @@ document.addEventListener('DOMContentLoaded', () => {
       ` : ''}
     `;
 
-    // Click vào vùng thân thẻ task để mở modal chỉnh sửa (bỏ qua nếu click trúng nút icon hành động)
+    // Click vào vùng thân thẻ task để mở modal chỉnh sửa (bỏ qua nếu click trúng nút icon hành động hoặc đang chế độ chọn nhiều)
     card.addEventListener('click', (e) => {
       if (role === 'viewer') return; // Viewer không được mở modal sửa
-      if (e.target.closest('.action-icon')) return;
+      if (e.target.closest('.action-icon') || e.target.closest('input[type="checkbox"]')) return;
+      if (isBatchSelectMode) {
+        const chk = card.querySelector('.task-item-checkbox-wrapper input[type="checkbox"]');
+        if (chk) {
+          chk.checked = !chk.checked;
+          chk.dispatchEvent(new Event('change'));
+        }
+        return;
+      }
       openEditModal(task);
     });
 
@@ -947,6 +986,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
+
+    // Phase 6: Thêm checkbox để chọn nhiều task
+    const checkboxWrapper = document.createElement('div');
+    checkboxWrapper.className = 'task-item-checkbox-wrapper';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = selectedTaskIds.includes(task.id);
+    checkbox.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+    checkbox.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        if (!selectedTaskIds.includes(task.id)) {
+          selectedTaskIds.push(task.id);
+        }
+      } else {
+        selectedTaskIds = selectedTaskIds.filter(id => id !== task.id);
+      }
+      updateBatchBar();
+    });
+    checkboxWrapper.appendChild(checkbox);
+    card.appendChild(checkboxWrapper);
+
+    // Phase 6: Lắng nghe tương tác nhanh subtask trên thẻ
+    const subtaskItems = card.querySelectorAll('.card-quick-subtasks-item');
+    subtaskItems.forEach(item => {
+      const subtaskCheckbox = item.querySelector('input[type="checkbox"]');
+      subtaskCheckbox.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+      subtaskCheckbox.addEventListener('change', async (e) => {
+        const idx = parseInt(item.getAttribute('data-idx'));
+        const updatedSubtasks = [...task.subtasks];
+        updatedSubtasks[idx].completed = e.target.checked;
+        
+        try {
+          const response = await fetch(`/api/tasks/${task.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ subtasks: updatedSubtasks })
+          });
+          if (!response.ok) throw new Error('Không thể cập nhật subtask');
+          await fetchTasks();
+        } catch (err) {
+          alert('Lỗi cập nhật subtask: ' + err.message);
+          e.target.checked = !e.target.checked;
+        }
+      });
+    });
 
     return card;
   }
@@ -1397,6 +1488,89 @@ document.addEventListener('DOMContentLoaded', () => {
     trashDrawer.addEventListener('click', (e) => {
       if (e.target === trashDrawer) {
         trashDrawer.style.display = 'none';
+      }
+    });
+  }
+
+  // Phase 6: Thao tác hàng loạt (Batch Actions)
+  function updateBatchBar() {
+    if (isBatchSelectMode && selectedTaskIds.length > 0) {
+      batchActionBar.style.display = 'block';
+      batchSelectedCount.textContent = `Đã chọn ${selectedTaskIds.length} công việc`;
+    } else {
+      batchActionBar.style.display = 'none';
+    }
+  }
+
+  if (batchSelectBtn) {
+    batchSelectBtn.addEventListener('click', () => {
+      isBatchSelectMode = !isBatchSelectMode;
+      if (isBatchSelectMode) {
+        document.body.classList.add('batch-select-active');
+        batchSelectBtn.classList.add('active-batch-btn');
+      } else {
+        document.body.classList.remove('batch-select-active');
+        batchSelectBtn.classList.remove('active-batch-btn');
+        selectedTaskIds = [];
+        updateBatchBar();
+      }
+      renderBoard();
+    });
+  }
+
+  if (batchCancelBtn) {
+    batchCancelBtn.addEventListener('click', () => {
+      isBatchSelectMode = false;
+      document.body.classList.remove('batch-select-active');
+      batchSelectBtn.classList.remove('active-batch-btn');
+      selectedTaskIds = [];
+      updateBatchBar();
+      renderBoard();
+    });
+  }
+
+  const executeBatchAction = async (action, value) => {
+    try {
+      const response = await fetch('/api/tasks/batch', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ids: selectedTaskIds,
+          action,
+          value
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Thao tác hàng loạt thất bại');
+      
+      isBatchSelectMode = false;
+      document.body.classList.remove('batch-select-active');
+      batchSelectBtn.classList.remove('active-batch-btn');
+      selectedTaskIds = [];
+      updateBatchBar();
+      await fetchTasks();
+      showToast(data.message || 'Thao tác hàng loạt thành công');
+    } catch (err) {
+      alert('Lỗi thao tác hàng loạt: ' + err.message);
+    }
+  };
+
+  if (batchPriorityHigh) {
+    batchPriorityHigh.addEventListener('click', () => executeBatchAction('priority', 'high'));
+  }
+  if (batchPriorityMedium) {
+    batchPriorityMedium.addEventListener('click', () => executeBatchAction('priority', 'medium'));
+  }
+  if (batchPriorityLow) {
+    batchPriorityLow.addEventListener('click', () => executeBatchAction('priority', 'low'));
+  }
+  if (batchArchiveBtn) {
+    batchArchiveBtn.addEventListener('click', () => {
+      if (confirm(`Bạn có chắc chắn muốn đưa ${selectedTaskIds.length} công việc đã chọn vào Thùng rác?`)) {
+        executeBatchAction('archive', true);
       }
     });
   }

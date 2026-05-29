@@ -12,7 +12,7 @@ test.describe('Kiểm thử Phụ thuộc Công việc (Task Dependencies)', () 
     await loginPage.navigate();
     
     // Đăng ký bộ lắng nghe dialog để chấp nhận thông báo xác nhận reset database
-    const handleResetDialog = async (dialog) => {
+    const handleResetDialog = async (dialog: any) => {
       await dialog.accept();
     };
     page.on('dialog', handleResetDialog);
@@ -57,7 +57,7 @@ test.describe('Kiểm thử Phụ thuộc Công việc (Task Dependencies)', () 
 
     // 4. Thử di chuyển Task B sang "Đã Xong" (Completed) -> Bị chặn
     let alertMessage = '';
-    page.once('dialog', async dialog => {
+    page.once('dialog', async (dialog: any) => {
       alertMessage = dialog.message();
       await dialog.accept();
     });

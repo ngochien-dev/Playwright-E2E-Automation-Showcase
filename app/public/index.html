@@ -187,6 +187,10 @@
             <i class="fa-solid fa-rotate-left"></i>
             <span>Reset Cơ Sở Dữ Liệu</span>
           </button>
+          <button id="batch-select-btn" class="btn btn-secondary">
+            <i class="fa-solid fa-square-check"></i>
+            <span>Chọn Nhiều</span>
+          </button>
           <button id="open-add-task-btn" class="btn btn-primary">
             <i class="fa-solid fa-plus"></i>
             <span>Tạo Công Việc</span>
@@ -403,6 +407,28 @@
         <div id="trash-list" class="timeline">
           <p class="text-muted" style="text-align: center; margin-top: 2rem;">Thùng rác trống.</p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Batch Action Bar -->
+  <div id="batch-action-bar" class="glass-card batch-action-bar" style="display: none;">
+    <div class="batch-bar-content">
+      <span id="batch-selected-count">Đã chọn 0 công việc</span>
+      <div class="batch-bar-actions">
+        <button id="batch-priority-high" class="btn btn-secondary btn-sm">
+          <i class="fa-solid fa-angles-up" style="color: #f87171;"></i> Ưu tiên: Cao
+        </button>
+        <button id="batch-priority-medium" class="btn btn-secondary btn-sm">
+          <i class="fa-solid fa-angle-up" style="color: #fbbf24;"></i> Ưu tiên: Trung bình
+        </button>
+        <button id="batch-priority-low" class="btn btn-secondary btn-sm">
+          <i class="fa-solid fa-angle-down" style="color: #34d399;"></i> Ưu tiên: Thấp
+        </button>
+        <button id="batch-archive-btn" class="btn btn-warning btn-sm">
+          <i class="fa-solid fa-trash-can"></i> Thùng rác
+        </button>
+        <button id="batch-cancel-btn" class="btn-text" style="margin-left: 0.5rem;">Hủy chọn</button>
       </div>
     </div>
   </div>

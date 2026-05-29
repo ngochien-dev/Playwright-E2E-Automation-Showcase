@@ -341,6 +341,59 @@ app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
   );
 });
 
+// API Thao tác hàng loạt (Batch Actions)
+app.put('/api/tasks/batch', authenticate, authorizeAdmin, (req, res) => {
+  const { ids, action, value } = req.body;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'Danh sách ID không hợp lệ hoặc rỗng.' });
+  }
+
+  if (action !== 'priority' && action !== 'archive') {
+    return res.status(400).json({ error: 'Hành động không hợp lệ. Chỉ chấp nhận "priority" hoặc "archive".' });
+  }
+
+  const placeholders = ids.map(() => '?').join(',');
+
+  if (action === 'priority') {
+    const priority = value;
+    if (priority !== 'low' && priority !== 'medium' && priority !== 'high') {
+      return res.status(400).json({ error: 'Độ ưu tiên không hợp lệ.' });
+    }
+
+    // Lấy thông tin các task để log
+    db.all(`SELECT title FROM tasks WHERE id IN (${placeholders})`, ids, (err, tasks) => {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      db.run(`UPDATE tasks SET priority = ? WHERE id IN (${placeholders})`, [priority, ...ids], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        const taskTitles = tasks.map(t => t.title).join(', ');
+        logActivity(req.user.username, 'UPDATE_BATCH', 'Hàng loạt', `Đã cập nhật độ ưu tiên thành ${priority === 'high' ? 'Cao' : priority === 'low' ? 'Thấp' : 'Trung bình'} cho các công việc: ${taskTitles}`, () => {
+          broadcastEvent('change');
+          res.json({ message: 'Cập nhật độ ưu tiên hàng loạt thành công.', updated: this.changes });
+        });
+      });
+    });
+  } else if (action === 'archive') {
+    const archived = value ? 1 : 0;
+    
+    db.all(`SELECT title FROM tasks WHERE id IN (${placeholders})`, ids, (err, tasks) => {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      db.run(`UPDATE tasks SET archived = ? WHERE id IN (${placeholders})`, [archived, ...ids], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        const taskTitles = tasks.map(t => t.title).join(', ');
+        const details = archived === 1 ? 'Đã đưa hàng loạt công việc vào Thùng rác' : 'Đã khôi phục hàng loạt công việc từ Thùng rác';
+        logActivity(req.user.username, 'DELETE_BATCH', 'Hàng loạt', `${details}: ${taskTitles}`, () => {
+          broadcastEvent('change');
+          res.json({ message: archived === 1 ? 'Lưu trữ hàng loạt thành công.' : 'Khôi phục hàng loạt thành công.', updated: this.changes });
+        });
+      });
+    });
+  }
+});
+
 // API Cập nhật nội dung hoặc trạng thái của một Task
 app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
   const { id } = req.params;
