@@ -94,7 +94,7 @@ test.describe('Kiểm Thử REST API Backend', () => {
 
     expect(deleteResponse.status()).toBe(200);
     const deleteBody = await deleteResponse.json();
-    expect(deleteBody.message).toContain('Xóa công việc thành công.');
+    expect(deleteBody.message).toContain('Đã đưa công việc vào Thùng rác.');
 
     // 3. Thực hiện GET lại task để chắc chắn nó không còn tồn tại
     const getResponse = await request.get('/api/tasks', {

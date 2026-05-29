@@ -138,6 +138,21 @@
             <i class="fa-solid fa-moon"></i>
             <span class="theme-text">Tối</span>
           </button>
+          <div class="notification-container">
+            <button id="notification-bell-btn" class="btn btn-secondary btn-sm" title="Thông báo">
+              <i class="fa-regular fa-bell"></i>
+              <span id="notification-badge" class="badge-dot" style="display: none;"></span>
+            </button>
+            <div id="notification-dropdown" class="glass-card notification-dropdown" style="display: none;">
+              <div class="dropdown-header">
+                <h3>Thông Báo</h3>
+                <button id="mark-all-read-btn" class="btn-text">Đọc tất cả</button>
+              </div>
+              <div id="notification-list" class="dropdown-list">
+                <p class="text-muted" style="text-align: center; padding: 1rem 0;">Chưa có thông báo nào.</p>
+              </div>
+            </div>
+          </div>
           <button id="open-activity-btn" class="btn btn-secondary btn-sm" title="Lịch sử hoạt động">
             <i class="fa-solid fa-clock-rotate-left"></i>
             <span>Lịch sử</span>
@@ -145,6 +160,10 @@
           <button id="open-analytics-btn" class="btn btn-secondary btn-sm" title="Thống kê">
             <i class="fa-solid fa-chart-pie"></i>
             <span>Thống kê</span>
+          </button>
+          <button id="open-trash-btn" class="btn btn-secondary btn-sm" title="Thùng rác">
+            <i class="fa-solid fa-trash-can"></i>
+            <span>Thùng rác</span>
           </button>
           <button id="export-csv-btn" class="btn btn-secondary btn-sm" title="Xuất CSV">
             <i class="fa-solid fa-file-csv"></i>
@@ -288,6 +307,12 @@
             <!-- Users sẽ được render bằng JS -->
           </select>
         </div>
+        <div class="form-group" id="dependency-group">
+          <label for="task-dependency">Bị chặn bởi (Dependency)</label>
+          <select id="task-dependency">
+            <option value="">-- Không có --</option>
+          </select>
+        </div>
         <div class="form-group subtasks-group">
           <label>Danh sách việc con (Subtasks)</label>
           <div class="subtasks-progress">
@@ -366,6 +391,24 @@
       </div>
     </div>
   </div>
+
+  <!-- Trash Drawer (Recycle Bin) -->
+  <div id="trash-drawer" class="drawer-backdrop" style="display: none;">
+    <div class="glass-card drawer-card" style="width: 500px;">
+      <div class="drawer-header">
+        <h3><i class="fa-solid fa-trash-can"></i> Thùng rác</h3>
+        <button id="close-trash-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="drawer-content">
+        <div id="trash-list" class="timeline">
+          <p class="text-muted" style="text-align: center; margin-top: 2rem;">Thùng rác trống.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
 
   <!-- Scripts -->
   <script src="app.js"></script>

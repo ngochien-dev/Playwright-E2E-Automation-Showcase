@@ -4,6 +4,40 @@ document.addEventListener('DOMContentLoaded', () => {
   let username = localStorage.getItem('username') || '';
   let role = localStorage.getItem('role') || '';
   let tasks = [];
+  let eventSource = null;
+
+  function connectSSE() {
+    if (eventSource) {
+      eventSource.close();
+    }
+    eventSource = new EventSource('/api/events');
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'change') {
+          fetchTasks();
+        } else if (payload.type === 'notification') {
+          if (payload.data.username === username) {
+            showToast(payload.data.message);
+            fetchNotifications();
+          }
+        }
+      } catch (err) {
+        console.error('SSE error:', err);
+      }
+    };
+    eventSource.onerror = (err) => {
+      eventSource.close();
+      setTimeout(connectSSE, 5000);
+    };
+  }
+
+  function disconnectSSE() {
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+  }
 
   // --- Tìm các thành phần DOM ---
   const authView = document.getElementById('auth-view');
@@ -72,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const taskDueDateInput = document.getElementById('task-due-date');
   const taskTagsInput = document.getElementById('task-tags');
   const taskAssigneeSelect = document.getElementById('task-assignee');
+  const taskDependencySelect = document.getElementById('task-dependency');
   
   // Nút Export CSV
   const exportCsvBtn = document.getElementById('export-csv-btn');
@@ -91,6 +126,20 @@ document.addEventListener('DOMContentLoaded', () => {
       placeholder: 'Nhập mô tả chi tiết công việc hoặc các bước tái tạo lỗi...'
     });
   }
+
+  // Notifications
+  const notificationBellBtn = document.getElementById('notification-bell-btn');
+  const notificationBadge = document.getElementById('notification-badge');
+  const notificationDropdown = document.getElementById('notification-dropdown');
+  const notificationList = document.getElementById('notification-list');
+  const markAllReadBtn = document.getElementById('mark-all-read-btn');
+  const toastContainer = document.getElementById('toast-container');
+
+  // Thùng rác
+  const openTrashBtn = document.getElementById('open-trash-btn');
+  const closeTrashBtn = document.getElementById('close-trash-btn');
+  const trashDrawer = document.getElementById('trash-drawer');
+  const trashList = document.getElementById('trash-list');
 
   // Comments
   const commentsGroup = document.getElementById('comments-group');
@@ -145,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Điều khiển Ẩn/Hiện Màn hình ---
   function showAuth() {
+    disconnectSSE();
     authView.style.display = 'block';
     dashboardView.style.display = 'none';
     loginError.style.display = 'none';
@@ -161,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function showDashboard() {
+    connectSSE();
     authView.style.display = 'none';
     dashboardView.style.display = 'block';
     userDisplayName.textContent = `${username} (${role === 'admin' ? 'Quản trị viên' : 'Người xem'})`;
@@ -169,13 +220,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (role === 'viewer') {
       openAddTaskBtn.style.display = 'none';
       resetDbBtn.style.display = 'none';
+      if (openTrashBtn) openTrashBtn.style.display = 'none';
     } else {
       openAddTaskBtn.style.display = 'block';
       resetDbBtn.style.display = 'block';
+      if (openTrashBtn) openTrashBtn.style.display = 'block';
     }
     
     fetchTasks();
     fetchUsers();
+    fetchNotifications();
   }
 
   // --- Lắng nghe sự kiện (Event Listeners) ---
@@ -403,8 +457,25 @@ document.addEventListener('DOMContentLoaded', () => {
     currentSubtasks = [];
     currentComments = [];
     renderSubtasks();
+    populateDependencyDropdown('');
     taskModal.style.display = 'flex';
   });
+
+  function populateDependencyDropdown(selectedValue, excludeTaskId = null) {
+    if (!taskDependencySelect) return;
+    taskDependencySelect.innerHTML = '<option value="">-- Không có --</option>';
+    
+    tasks.forEach(t => {
+      if (excludeTaskId && t.id === excludeTaskId) return;
+      const option = document.createElement('option');
+      option.value = t.id;
+      option.textContent = t.title;
+      if (String(t.id) === String(selectedValue)) {
+        option.selected = true;
+      }
+      taskDependencySelect.appendChild(option);
+    });
+  }
 
   // Đóng Modal Form
   function renderComments() {
@@ -602,7 +673,8 @@ document.addEventListener('DOMContentLoaded', () => {
       due_date: taskDueDateInput ? taskDueDateInput.value : null,
       tags: taskTagsInput ? taskTagsInput.value.split(',').map(t => t.trim()).filter(t => t !== '') : [],
       assignee: taskAssigneeSelect ? taskAssigneeSelect.value : null,
-      comments: currentComments
+      comments: currentComments,
+      blocked_by: taskDependencySelect && taskDependencySelect.value ? parseInt(taskDependencySelect.value) : null
     };
 
     let url = '/api/tasks';
@@ -799,12 +871,24 @@ document.addEventListener('DOMContentLoaded', () => {
       assigneeHtml = `<div class="assignee-avatar" title="Phụ trách: ${escapeHtml(task.assignee)}">${initial}</div>`;
     }
 
+    let dependencyHtml = '';
+    if (task.blocked_by) {
+      const blocker = tasks.find(t => t.id === task.blocked_by);
+      const blockerTitle = blocker ? blocker.title : `Task #${task.blocked_by}`;
+      dependencyHtml = `
+        <div class="dependency-badge" title="Bị chặn bởi: ${escapeHtml(blockerTitle)}">
+          <i class="fa-solid fa-ban"></i> Bị chặn bởi: ${escapeHtml(blockerTitle)}
+        </div>
+      `;
+    }
+
     card.innerHTML = `
       <div class="task-item-header">
         <span class="task-item-title">${escapeHtml(task.title)}</span>
       </div>
       ${task.description ? `<p class="task-item-desc">${escapeHtml(stripHtml(task.description))}</p>` : ''}
       ${subtasksIndicator}
+      ${dependencyHtml}
       <div class="card-meta">
         <div class="priority-badge priority-${task.priority || 'medium'}">${priorityText}</div>
         ${dueDateHtml}
@@ -877,6 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (taskDueDateInput) taskDueDateInput.value = task.due_date || '';
     if (taskTagsInput) taskTagsInput.value = task.tags ? task.tags.join(', ') : '';
     if (taskAssigneeSelect) taskAssigneeSelect.value = task.assignee || '';
+    populateDependencyDropdown(task.blocked_by || '', task.id);
     
     currentSubtasks = task.subtasks || [];
     renderSubtasks();
@@ -912,7 +997,10 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ status: newStatus })
       });
 
-      if (!response.ok) throw new Error('Không thể cập nhật trạng thái công việc');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Không thể cập nhật trạng thái công việc');
+      }
       await fetchTasks();
     } catch (err) {
       alert('Lỗi cập nhật trạng thái: ' + err.message);
@@ -1060,6 +1148,255 @@ document.addEventListener('DOMContentLoaded', () => {
             labels: { color: textColor }
           }
         }
+      }
+    });
+  }
+
+  // Toast System
+  function showToast(message) {
+    if (!toastContainer) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast-item';
+    toast.innerHTML = `
+      <div class="toast-icon"><i class="fa-solid fa-bell"></i></div>
+      <div class="toast-content">${escapeHtml(message)}</div>
+      <button class="toast-close"><i class="fa-solid fa-xmark"></i></button>
+    `;
+
+    toast.querySelector('.toast-close').addEventListener('click', () => {
+      toast.classList.add('fade-out');
+      setTimeout(() => toast.remove(), 300);
+    });
+
+    toastContainer.appendChild(toast);
+
+    // Auto remove after 4 seconds
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.classList.add('fade-out');
+        setTimeout(() => toast.remove(), 300);
+      }
+    }, 4000);
+  }
+
+  // Fetch & Render Notifications
+  async function fetchNotifications() {
+    if (!token) return;
+    try {
+      const response = await fetch('/api/notifications', {
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
+      });
+      if (!response.ok) throw new Error('Không thể tải thông báo');
+      const notifications = await response.json();
+      renderNotifications(notifications);
+    } catch (err) {
+      console.error('Lỗi fetch notifications:', err);
+    }
+  }
+
+  function renderNotifications(notifications) {
+    if (!notificationList) return;
+    notificationList.innerHTML = '';
+    
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+    if (unreadCount > 0) {
+      notificationBadge.style.display = 'block';
+    } else {
+      notificationBadge.style.display = 'none';
+    }
+
+    if (notifications.length === 0) {
+      notificationList.innerHTML = '<p class="text-muted" style="text-align: center; padding: 1rem 0;">Chưa có thông báo nào.</p>';
+      return;
+    }
+
+    notifications.forEach(n => {
+      const item = document.createElement('div');
+      item.className = `notification-item ${!n.is_read ? 'unread' : ''}`;
+      item.innerHTML = `
+        <div class="notification-item-content">
+          <div>${escapeHtml(n.message)}</div>
+          <span class="notification-time">${new Date(n.created_at).toLocaleString('vi-VN')}</span>
+        </div>
+      `;
+
+      item.addEventListener('click', async () => {
+        if (!n.is_read) {
+          await markNotificationRead(n.id);
+        }
+      });
+
+      notificationList.appendChild(item);
+    });
+  }
+
+  async function markNotificationRead(id) {
+    try {
+      await fetch(`/api/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      await fetchNotifications();
+    } catch (err) {
+      console.error('Lỗi đánh dấu đã đọc:', err);
+    }
+  }
+
+  async function markAllNotificationsRead() {
+    try {
+      const response = await fetch('/api/notifications', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const notifications = await response.json();
+      const unreads = notifications.filter(n => !n.is_read);
+      await Promise.all(unreads.map(n => 
+        fetch(`/api/notifications/${n.id}/read`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ));
+      await fetchNotifications();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // Event Listeners cho Notifications
+  if (notificationBellBtn) {
+    notificationBellBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = notificationDropdown.style.display === 'block';
+      notificationDropdown.style.display = isVisible ? 'none' : 'block';
+      if (!isVisible) {
+        fetchNotifications();
+      }
+    });
+
+    // Đóng dropdown khi click ngoài
+    document.addEventListener('click', (e) => {
+      if (notificationDropdown && !notificationDropdown.contains(e.target) && e.target !== notificationBellBtn) {
+        notificationDropdown.style.display = 'none';
+      }
+    });
+  }
+
+  if (markAllReadBtn) {
+    markAllReadBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await markAllNotificationsRead();
+    });
+  }
+
+  // Fetch & Render Trash
+  async function fetchTrash() {
+    if (!token) return;
+    try {
+      const response = await fetch('/api/tasks/archived', {
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
+      });
+      if (!response.ok) throw new Error('Không thể tải thùng rác');
+      const archivedTasks = await response.json();
+      renderTrash(archivedTasks);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function renderTrash(archivedTasks) {
+    if (!trashList) return;
+    trashList.innerHTML = '';
+
+    if (archivedTasks.length === 0) {
+      trashList.innerHTML = '<p class="text-muted" style="text-align: center; margin-top: 2rem;">Thùng rác trống.</p>';
+      return;
+    }
+
+    archivedTasks.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'timeline-item';
+      item.innerHTML = `
+        <div class="timeline-badge badge-delete" style="background-color: var(--text-muted);"></div>
+        <div class="timeline-meta" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span class="timeline-user" style="font-weight: 600; font-size: 0.9rem;">${escapeHtml(t.title)}</span>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-sm restore-task-btn" data-id="${t.id}" title="Khôi phục" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">
+              <i class="fa-solid fa-rotate-left"></i> Khôi phục
+            </button>
+            <button class="btn btn-danger btn-sm perm-delete-task-btn" data-id="${t.id}" title="Xóa vĩnh viễn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); color: #f87171;">
+              <i class="fa-solid fa-trash-can"></i> Xóa
+            </button>
+          </div>
+        </div>
+        <div class="timeline-title" style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">
+          ${t.description ? escapeHtml(stripHtml(t.description)) : 'Không có mô tả.'}
+        </div>
+      `;
+
+      item.querySelector('.restore-task-btn').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await restoreTask(t.id);
+      });
+
+      item.querySelector('.perm-delete-task-btn').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn công việc "${t.title}" không? Hành động này không thể khôi phục!`)) {
+          await permanentlyDeleteTask(t.id);
+        }
+      });
+
+      trashList.appendChild(item);
+    });
+  }
+
+  async function restoreTask(id) {
+    try {
+      const response = await fetch(`/api/tasks/${id}/restore`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Không thể khôi phục công việc');
+      await fetchTrash();
+      await fetchTasks();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  async function permanentlyDeleteTask(id) {
+    try {
+      const response = await fetch(`/api/tasks/${id}/permanent`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Không thể xóa vĩnh viễn công việc');
+      await fetchTrash();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  // Event Listeners cho Thùng rác
+  if (openTrashBtn) {
+    openTrashBtn.addEventListener('click', () => {
+      trashDrawer.style.display = 'flex';
+      fetchTrash();
+    });
+  }
+
+  if (closeTrashBtn) {
+    closeTrashBtn.addEventListener('click', () => {
+      trashDrawer.style.display = 'none';
+    });
+  }
+
+  if (trashDrawer) {
+    trashDrawer.addEventListener('click', (e) => {
+      if (e.target === trashDrawer) {
+        trashDrawer.style.display = 'none';
       }
     });
   }

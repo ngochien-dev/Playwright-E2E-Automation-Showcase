@@ -77,6 +77,6 @@ test.describe('Kiểm thử Lịch Sử Hoạt Động (Activity Log Timeline & 
     await dashboardPage.openActivityLogs();
     await expect(dashboardPage.timelineItems.first()).toContainText('@admin');
     await expect(dashboardPage.timelineItems.first()).toContainText('Viết test case Lịch sử');
-    await expect(dashboardPage.timelineItems.first()).toContainText('Đã xóa công việc');
+    await expect(dashboardPage.timelineItems.first()).toContainText('Đã đưa công việc vào Thùng rác');
   });
 });

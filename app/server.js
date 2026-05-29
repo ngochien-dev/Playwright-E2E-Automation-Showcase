@@ -76,6 +76,8 @@ function initializeDatabase() {
     db.run(`ALTER TABLE tasks ADD COLUMN tags TEXT DEFAULT '[]'`, (err) => { /* ignore if column exists */ });
     db.run(`ALTER TABLE tasks ADD COLUMN assignee TEXT`, (err) => { /* ignore if column exists */ });
     db.run(`ALTER TABLE tasks ADD COLUMN comments TEXT DEFAULT '[]'`, (err) => { /* ignore if column exists */ });
+    db.run(`ALTER TABLE tasks ADD COLUMN archived INTEGER DEFAULT 0`, (err) => { /* ignore if column exists */ });
+    db.run(`ALTER TABLE tasks ADD COLUMN blocked_by INTEGER`, (err) => { /* ignore if column exists */ });
 
     db.run(`
       CREATE TABLE IF NOT EXISTS activity_logs (
@@ -84,6 +86,16 @@ function initializeDatabase() {
         action TEXT,
         task_title TEXT,
         details TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        message TEXT,
+        is_read INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -117,6 +129,20 @@ function logActivity(username, action, taskTitle, details, callback) {
   );
 }
 
+// Hàm tiện ích tạo thông báo
+function createNotification(username, message, callback) {
+  db.run(
+    'INSERT INTO notifications (username, message, is_read) VALUES (?, ?, 0)',
+    [username, message],
+    function (err) {
+      if (!err) {
+        broadcastEvent('notification', { username, message, id: this.lastID });
+      }
+      if (callback) callback(err);
+    }
+  );
+}
+
 // Middleware dùng để xác thực token gửi lên trong Header
 function authenticate(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -142,6 +168,28 @@ function authorizeAdmin(req, res, next) {
     return res.status(403).json({ error: 'Quyền truy cập bị từ chối. Chỉ tài khoản Quản trị viên mới được phép thực hiện hành động này.' });
   }
 }
+
+let sseClients = [];
+function broadcastEvent(type, data = {}) {
+  const payload = JSON.stringify({ type, data });
+  sseClients.forEach(client => {
+    client.write(`data: ${payload}\n\n`);
+  });
+}
+
+// Server-Sent Events (SSE) Endpoint cho đồng bộ thời gian thực
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  sseClients.push(res);
+
+  req.on('close', () => {
+    sseClients = sseClients.filter(c => c !== res);
+  });
+});
 
 // --- CÁC ENDPOINT API ---
 
@@ -208,9 +256,25 @@ app.post('/api/auth/login', (req, res) => {
   );
 });
 
-// API Lấy danh sách Task
+// API Lấy danh sách Task (chưa xóa)
 app.get('/api/tasks', authenticate, (req, res) => {
-  db.all('SELECT * FROM tasks ORDER BY created_at DESC', [], (err, rows) => {
+  db.all('SELECT * FROM tasks WHERE archived = 0 ORDER BY created_at DESC', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    const formattedRows = rows.map(row => ({
+      ...row,
+      subtasks: row.subtasks ? JSON.parse(row.subtasks) : [],
+      tags: row.tags ? JSON.parse(row.tags) : [],
+      comments: row.comments ? JSON.parse(row.comments) : []
+    }));
+    res.json(formattedRows);
+  });
+});
+
+// API Lấy danh sách Task đã xóa (Thùng rác)
+app.get('/api/tasks/archived', authenticate, (req, res) => {
+  db.all('SELECT * FROM tasks WHERE archived = 1 ORDER BY created_at DESC', [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -236,7 +300,7 @@ app.get('/api/users', authenticate, (req, res) => {
 
 // API Tạo mới một Task
 app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
-  const { title, description, priority, subtasks, due_date, tags, assignee, comments } = req.body;
+  const { title, description, priority, subtasks, due_date, tags, assignee, comments, blocked_by } = req.body;
   if (!title) {
     return res.status(400).json({ error: 'Tiêu đề công việc là bắt buộc.' });
   }
@@ -244,16 +308,21 @@ app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
   const taskSubtasks = subtasks ? JSON.stringify(subtasks) : '[]';
   const taskTags = tags ? JSON.stringify(tags) : '[]';
   const taskComments = comments ? JSON.stringify(comments) : '[]';
+  const taskBlockedBy = blocked_by || null;
 
   db.run(
-    'INSERT INTO tasks (title, description, status, priority, subtasks, due_date, tags, assignee, comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [title, description || '', 'todo', taskPriority, taskSubtasks, due_date || null, taskTags, assignee || null, taskComments],
+    'INSERT INTO tasks (title, description, status, priority, subtasks, due_date, tags, assignee, comments, blocked_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [title, description || '', 'todo', taskPriority, taskSubtasks, due_date || null, taskTags, assignee || null, taskComments, taskBlockedBy],
     function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
       const taskId = this.lastID;
       logActivity(req.user.username, 'CREATE', title, `Đã tạo công việc mới (Độ ưu tiên: ${taskPriority === 'high' ? 'Cao' : taskPriority === 'low' ? 'Thấp' : 'Trung bình'})`, () => {
+        broadcastEvent('change');
+        if (assignee) {
+          createNotification(assignee, `${req.user.username} đã giao công việc "${title}" cho bạn.`);
+        }
         res.status(201).json({
           id: taskId,
           title,
@@ -264,7 +333,8 @@ app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
           due_date: due_date || null,
           tags: JSON.parse(taskTags),
           assignee: assignee || null,
-          comments: JSON.parse(taskComments)
+          comments: JSON.parse(taskComments),
+          blocked_by: taskBlockedBy
         });
       });
     }
@@ -274,7 +344,7 @@ app.post('/api/tasks', authenticate, authorizeAdmin, (req, res) => {
 // API Cập nhật nội dung hoặc trạng thái của một Task
 app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
   const { id } = req.params;
-  const { title, description, status, priority, subtasks, due_date, tags, assignee, comments } = req.body;
+  const { title, description, status, priority, subtasks, due_date, tags, assignee, comments, blocked_by } = req.body;
 
   db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
     if (err) {
@@ -293,40 +363,117 @@ app.put('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
     const updatedTags = tags !== undefined ? JSON.stringify(tags) : (task.tags || '[]');
     const updatedAssignee = assignee !== undefined ? assignee : task.assignee;
     const updatedComments = comments !== undefined ? JSON.stringify(comments) : (task.comments || '[]');
+    const updatedBlockedBy = blocked_by !== undefined ? blocked_by : task.blocked_by;
 
-    db.run(
-      'UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, subtasks = ?, due_date = ?, tags = ?, assignee = ?, comments = ? WHERE id = ?',
-      [updatedTitle, updatedDesc, updatedStatus, updatedPriority, updatedSubtasks, updatedDueDate, updatedTags, updatedAssignee, updatedComments, id],
-      (err) => {
+    const runUpdate = () => {
+      db.run(
+        'UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, subtasks = ?, due_date = ?, tags = ?, assignee = ?, comments = ?, blocked_by = ? WHERE id = ?',
+        [updatedTitle, updatedDesc, updatedStatus, updatedPriority, updatedSubtasks, updatedDueDate, updatedTags, updatedAssignee, updatedComments, updatedBlockedBy, id],
+        (err) => {
+          if (err) {
+            return res.status(500).json({ error: err.message });
+          }
+          
+          // Tạo thông báo nếu giao cho người mới
+          if (assignee !== undefined && assignee !== task.assignee && assignee) {
+            createNotification(assignee, `${req.user.username} đã giao công việc "${updatedTitle}" cho bạn.`);
+          }
+          // Tạo thông báo nếu có bình luận mới
+          const oldComments = task.comments ? JSON.parse(task.comments) : [];
+          const newComments = comments !== undefined ? comments : [];
+          if (newComments.length > oldComments.length) {
+            const lastComment = newComments[newComments.length - 1];
+            const notifyUser = updatedAssignee || task.assignee;
+            if (notifyUser && lastComment.username !== notifyUser) {
+              createNotification(notifyUser, `${lastComment.username} đã bình luận trên công việc "${updatedTitle}".`);
+            }
+          }
+
+          const sendResponse = () => {
+            broadcastEvent('change');
+            res.json({
+              id: parseInt(id),
+              title: updatedTitle,
+              description: updatedDesc,
+              status: updatedStatus,
+              priority: updatedPriority,
+              subtasks: updatedSubtasks ? JSON.parse(updatedSubtasks) : [],
+              due_date: updatedDueDate,
+              tags: updatedTags ? JSON.parse(updatedTags) : [],
+              assignee: updatedAssignee,
+              blocked_by: updatedBlockedBy
+            });
+          };
+          if (status !== undefined && status !== task.status) {
+            const statusMap = { 'todo': 'Cần Làm', 'in_progress': 'Đang Làm', 'completed': 'Đã Xong' };
+            logActivity(req.user.username, 'MOVE', updatedTitle, `Đã chuyển sang cột "${statusMap[updatedStatus]}"`, sendResponse);
+          } else {
+            logActivity(req.user.username, 'UPDATE', updatedTitle, 'Đã cập nhật chi tiết công việc', sendResponse);
+          }
+        }
+      );
+    };
+
+    if (updatedStatus === 'completed' && updatedBlockedBy) {
+      db.get('SELECT status, title FROM tasks WHERE id = ?', [updatedBlockedBy], (err, blockerTask) => {
         if (err) {
           return res.status(500).json({ error: err.message });
         }
-        const sendResponse = () => {
-          res.json({
-            id: parseInt(id),
-            title: updatedTitle,
-            description: updatedDesc,
-            status: updatedStatus,
-            priority: updatedPriority,
-            subtasks: updatedSubtasks ? JSON.parse(updatedSubtasks) : [],
-            due_date: updatedDueDate,
-            tags: updatedTags ? JSON.parse(updatedTags) : [],
-            assignee: updatedAssignee
-          });
-        };
-        if (status !== undefined && status !== task.status) {
-          const statusMap = { 'todo': 'Cần Làm', 'in_progress': 'Đang Làm', 'completed': 'Đã Xong' };
-          logActivity(req.user.username, 'MOVE', updatedTitle, `Đã chuyển sang cột "${statusMap[updatedStatus]}"`, sendResponse);
-        } else {
-          logActivity(req.user.username, 'UPDATE', updatedTitle, 'Đã cập nhật chi tiết công việc', sendResponse);
+        if (blockerTask && blockerTask.status !== 'completed') {
+          return res.status(400).json({ error: `Công việc này đang bị chặn bởi công việc "${blockerTask.title}" chưa hoàn thành.` });
         }
-      }
-    );
+        runUpdate();
+      });
+    } else {
+      runUpdate();
+    }
   });
 });
 
-// API Xóa một Task theo ID
+// API Xóa một Task theo ID (Soft delete - chuyển vào Thùng rác)
 app.delete('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
+  const { id } = req.params;
+
+  db.get('SELECT title FROM tasks WHERE id = ?', [id], (err, task) => {
+    if (err || !task) {
+      return res.status(404).json({ error: 'Không tìm thấy công việc.' });
+    }
+
+    db.run('UPDATE tasks SET archived = 1 WHERE id = ?', [id], function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      logActivity(req.user.username, 'DELETE', task.title, 'Đã đưa công việc vào Thùng rác', () => {
+        broadcastEvent('change');
+        res.json({ message: 'Đã đưa công việc vào Thùng rác.', id: parseInt(id) });
+      });
+    });
+  });
+});
+
+// API Khôi phục một Task từ Thùng rác
+app.post('/api/tasks/:id/restore', authenticate, authorizeAdmin, (req, res) => {
+  const { id } = req.params;
+
+  db.get('SELECT title FROM tasks WHERE id = ?', [id], (err, task) => {
+    if (err || !task) {
+      return res.status(404).json({ error: 'Không tìm thấy công việc.' });
+    }
+
+    db.run('UPDATE tasks SET archived = 0 WHERE id = ?', [id], function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      logActivity(req.user.username, 'RESTORE', task.title, 'Đã khôi phục công việc từ Thùng rác', () => {
+        broadcastEvent('change');
+        res.json({ message: 'Khôi phục công việc thành công.', id: parseInt(id) });
+      });
+    });
+  });
+});
+
+// API Xóa vĩnh viễn một Task
+app.delete('/api/tasks/:id/permanent', authenticate, authorizeAdmin, (req, res) => {
   const { id } = req.params;
 
   db.get('SELECT title FROM tasks WHERE id = ?', [id], (err, task) => {
@@ -338,8 +485,9 @@ app.delete('/api/tasks/:id', authenticate, authorizeAdmin, (req, res) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
-      logActivity(req.user.username, 'DELETE', task.title, 'Đã xóa công việc', () => {
-        res.json({ message: 'Xóa công việc thành công.', id: parseInt(id) });
+      logActivity(req.user.username, 'DELETE_PERM', task.title, 'Đã xóa vĩnh viễn công việc', () => {
+        broadcastEvent('change');
+        res.json({ message: 'Xóa vĩnh viễn công việc thành công.', id: parseInt(id) });
       });
     });
   });
@@ -366,6 +514,7 @@ app.post('/api/tasks/:id/upload', authenticate, authorizeAdmin, upload.single('a
       db.get('SELECT title FROM tasks WHERE id = ?', [id], (err, task) => {
         const title = task ? task.title : `Task #${id}`;
         logActivity(req.user.username, 'UPDATE', title, `Đã đính kèm file: ${attachmentName}`, () => {
+          broadcastEvent('change');
           res.json({ message: 'Tải file lên thành công.', attachment_name: attachmentName, attachment_url: attachmentUrl });
         });
       });
@@ -383,6 +532,31 @@ app.get('/api/activities', authenticate, (req, res) => {
   });
 });
 
+// API Lấy danh sách thông báo
+app.get('/api/notifications', authenticate, (req, res) => {
+  db.all('SELECT * FROM notifications WHERE username = ? ORDER BY created_at DESC LIMIT 50', [req.user.username], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// API Đánh dấu thông báo đã đọc
+app.put('/api/notifications/:id/read', authenticate, (req, res) => {
+  const { id } = req.params;
+  db.run(
+    'UPDATE notifications SET is_read = 1 WHERE id = ? AND username = ?',
+    [id, req.user.username],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ message: 'Đã đánh dấu thông báo là đã đọc.', id: parseInt(id) });
+    }
+  );
+});
+
 // API Reset Database (API phụ trợ phục vụ automation test để dọn dẹp dữ liệu cũ)
 app.post('/api/db/reset', (req, res) => {
   db.serialize(() => {
@@ -393,6 +567,9 @@ app.post('/api/db/reset', (req, res) => {
       // Dọn dẹp cả lịch sử hoạt động khi reset database để sạch môi trường test
       db.run('DELETE FROM activity_logs', (err) => {
         if (err) console.error('Lỗi khi xóa bảng logs:', err.message);
+        db.run('DELETE FROM notifications', (err) => {
+          if (err) console.error('Lỗi khi xóa bảng notifications:', err.message);
+        });
         
         // Chèn lại task hệ thống mặc định để kiểm tra tính năng reset
         db.run(
@@ -403,6 +580,7 @@ app.post('/api/db/reset', (req, res) => {
               return res.status(500).json({ error: 'Không thể chèn công việc mặc định.' });
             }
             logActivity('Hệ thống', 'RESET', '-', 'Đã đặt lại cơ sở dữ liệu về mặc định', () => {
+              broadcastEvent('change');
               res.json({ message: 'Reset database thành công.' });
             });
           }
